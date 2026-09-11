@@ -298,6 +298,28 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   line-height: 0;         /* prevents baseline gap under the video */
 }
 
+/* --- Autonomous-rollout badge (auto-injected on rollout videos, bottom-left) --- */
+.rollout-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 4px 9px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: rgba(0,0,0,0.6);
+  border-radius: 999px;
+  line-height: 1.4;
+  backdrop-filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+
 /* --- Baselines & Results: task selector + 4-method grid --- */
 .res-tasks {
   display: flex;

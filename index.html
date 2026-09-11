@@ -465,7 +465,19 @@
       });
     });
 
-    // ==== Auto-inject an audio button on every other video ====
+    function attachRolloutBadge(container) {
+      if (container.querySelector(':scope > .rollout-badge')) return;   // already tagged
+      const badge = document.createElement('span');
+      badge.className = 'rollout-badge';
+      badge.setAttribute('title', 'The trained policy controls the robot — no teleoperation.');
+      badge.innerHTML = '<span aria-hidden="true">🤖</span> Autonomous Rollout';
+      container.appendChild(badge);
+    }
+    function isRollout(video) {
+      return !!video.closest('[data-rollout="true"]');
+    }
+
+    // ==== Auto-inject an audio button (and a rollout badge, where applicable) on every video ====
     document.querySelectorAll('video').forEach(video => {
       const parent = video.parentElement;
       if (!parent) return;
@@ -479,6 +491,13 @@
       // .attn-cell is already position:relative — put the button directly inside it.
       if (parent.classList.contains('attn-cell')) {
         attachAudioButton(video, parent);
+        if (isRollout(video)) attachRolloutBadge(parent);
+        return;
+      }
+      // .res-tile is already position:relative — put the button + badge directly inside it.
+      if (parent.classList.contains('res-tile')) {
+        attachAudioButton(video, parent);
+        if (isRollout(video)) attachRolloutBadge(parent);
         return;
       }
       // For any other video (teaser, setup, baselines, failures…): wrap it in a
@@ -489,6 +508,7 @@
       parent.insertBefore(shell, video);
       shell.appendChild(video);
       attachAudioButton(video, shell);
+      if (isRollout(video)) attachRolloutBadge(shell);
     });
 
     // ==== Keep perception-input diagram videos in sync (RGB source is master) ====
@@ -540,7 +560,7 @@
 </script>
 
 <!-- ============ BASELINES ============ -->
-<section class="section alt" id="results-section">
+<section class="section alt" id="results-section" data-rollout="true">
   <div class="container">
     <h2>Baselines &amp; Results</h2>
     <p class="lede">
@@ -561,7 +581,7 @@
       <figure class="res-tile" data-method="vision">
         <span class="res-tag">Vision-Only</span>
         <video autoplay muted loop playsinline preload="auto">
-          <source src="static/videos/results/thread_cable/vision.mp4" type="video/mp4" />
+          <source src="static/videos/results/thread_cable/rgb.mp4" type="video/mp4" />
         </video>
       </figure>
       <figure class="res-tile" data-method="maniwav">
@@ -631,7 +651,7 @@
 </script>
 
 <!-- ============ ATTENTION ============ -->
-<section class="section">
+<section class="section" data-rollout="true">
   <div class="container">
     <h2>What the Policy Attends To</h2>
     <p class="lede">
@@ -645,7 +665,7 @@
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
             <video autoplay muted loop playsinline>
-              <source src="static/videos/attn/threading/vision.mp4" type="video/mp4" />
+              <source src="static/videos/attn/threading/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
@@ -663,7 +683,7 @@
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
             <video autoplay muted loop playsinline>
-              <source src="static/videos/attn/peeling/vision.mp4" type="video/mp4" />
+              <source src="static/videos/attn/peeling/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
@@ -681,7 +701,7 @@
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
             <video autoplay muted loop playsinline>
-              <source src="static/videos/attn/cleaning/vision.mp4" type="video/mp4" />
+              <source src="static/videos/attn/cleaning/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
@@ -698,7 +718,7 @@
 </section>
 
 <!-- ============ FAILURE MODES ============ -->
-<section class="section alt">
+<section class="section alt" data-rollout="true">
   <div class="container">
     <h2>Failure Modes</h2>
     <p class="lede">A few characteristic failures we observed:</p>
