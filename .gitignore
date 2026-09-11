@@ -3,3 +3,12 @@
 .vscode/
 .idea/
 node_modules/
+
+# Task-folder side files not used by the site
+static/videos/task_rgb_rgba/*/wrist_cam_*.mp4
+static/videos/task_rgb_rgba/*/audio_ch0.wav
+static/videos/task_rgb_rgba/*/audio_beamforming.mp4
+static/videos/task_rgb_rgba/*/audio_history.mp4
+
+# Backups
+*.orig
