@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RGB+A Robot Perception</title>
+<title>RGBA Robot Perception</title>
 <meta name="description" content="Using Acoustic-Video Perception for Robot Manipulation with Occluded Contact Dynamics." />
 <link rel="stylesheet" href="static/css/style.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -48,7 +48,7 @@
         <source src="static/videos/teaser.mp4" type="video/mp4" />
       </video>
       <figcaption>
-        We present <strong>RGB+A robot perception</strong> — audio you can <em>see</em>, overlaid on video.
+        We present <strong>RGBA robot perception</strong> — using acoustic-video as a robot perception to improve manipulation performance under occluded contact dynamics.
       </figcaption>
     </figure>
   </div>
@@ -59,13 +59,13 @@
   <div class="container narrow">
     <h2>Abstract</h2>
     <p>
-      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates \textit{vibroacoustic} sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an \textit{RGBA} video stream (\textit{A} for Acoustic). We present two approaches to using RGBA video: 1) RGBA-Attention and 2) RGBA-History. Across five contact-rich manipulation tasks, experiments suggest that acoustic video improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
+      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates <em>vibroacoustic</em> sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an <em>RGBA</em> video stream (<em>A</em> for Acoustic). We present two approaches to using RGBA video: <strong>1) RGBA-Attention</strong> and <strong>2) RGBA-History</strong>. Across five contact-rich manipulation tasks, experiments suggest that acoustic video improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
     </p>
   </div>
 </section>
 
 <!-- ============ MOTIVATION ============ -->
-<section class="section alt">
+<!-- <section class="section alt">
   <div class="container">
     <h2>Occluded Contact Dynamics</h2>
     <p class="lede">
@@ -93,10 +93,10 @@
       </figure>
     </div>
   </div>
-</section>
+</section> -->
 
 <!-- ============ RELATED WORK ============ -->
-<section class="section">
+<!-- <section class="section">
   <div class="container narrow">
     <h2>Prior Audio-Augmented Manipulation</h2>
     <figure class="video-frame small">
@@ -109,18 +109,18 @@
     </figure>
     <p class="hook">But… what if robots could also <em>see</em> the sound?</p>
   </div>
-</section>
+</section> -->
 
 <!-- ============ SETUP ============ -->
 <section class="section alt">
   <div class="container">
-    <h2>Acoustic Camera Setup</h2>
+    <h2>RGBA Perception System</h2>
     <div class="grid grid-2">
       <figure class="video-frame">
         <video autoplay muted loop playsinline>
           <source src="static/videos/setup.mp4" type="video/mp4" />
         </video>
-        <figcaption>Robot workcell with an acoustic camera mounted alongside the RGB view.</figcaption>
+        <figcaption>We replace conventional overhead camera into an acoustic camera.</figcaption>
       </figure>
       <div>
         <p>
@@ -141,7 +141,7 @@
 <!-- ============ BEAMFORMING ============ -->
 <section class="section">
   <div class="container">
-    <h2>How Beamforming Works</h2>
+    <h2>Acoustic-Video Perception Input</h2>
     <figure class="diagram">
       <img src="static/images/beamforming.svg" alt="Illustration of acoustic beamforming producing an RGBA frame" />
       <figcaption>
@@ -156,7 +156,7 @@
 <!-- ============ METHODS ============ -->
 <section class="section alt">
   <div class="container">
-    <h2>Two Methods for Learning from RGBA</h2>
+    <h2>RGBA Policy Training Framework</h2>
     <p class="lede">
       We present two approaches to leverage acoustic video for imitation learning policies.
     </p>
@@ -193,47 +193,207 @@
 </section>
 
 <!-- ============ TASKS ============ -->
-<section class="section">
+<section class="section" id="tasks-section">
   <div class="container">
     <h2>Five Vibroacoustic Tasks</h2>
     <p class="lede">
       We evaluate on five representative manipulation tasks that passively and naturally make sound
-      during manipulation.
+      during manipulation. Drag the slider on each tile to compare <strong>RGB</strong> vs.
+      <strong>RGBA</strong>.
     </p>
+
     <div class="grid grid-5 tasks">
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/task_threading.mp4" type="video/mp4" />
-        </video>
-        <figcaption><strong>T1</strong> — Threading cable into a conduit</figcaption>
+      <figure class="video-frame compare" data-src="static/videos/task_rgb_rgba/thread_cable">
+        <figcaption><strong>Task 1</strong> — Threading cable into a conduit</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/task_grinding.mp4" type="video/mp4" />
-        </video>
-        <figcaption><strong>T2</strong> — Plastic grinding</figcaption>
+      <figure class="video-frame compare" data-src="static/videos/task_rgb_rgba/grind_plastic">
+        <figcaption><strong>Task 2</strong> — Plastic grinding</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/task_peeling.mp4" type="video/mp4" />
-        </video>
-        <figcaption><strong>T3</strong> — Transparent film peeling</figcaption>
+      <figure class="video-frame compare" data-src="static/videos/task_rgb_rgba/peel_film">
+        <figcaption><strong>Task 3</strong> — Transparent film peeling</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/task_boxopen.mp4" type="video/mp4" />
-        </video>
-        <figcaption><strong>T4</strong> — Sealed-box opening</figcaption>
+      <figure class="video-frame compare" data-src="static/videos/task_rgb_rgba/cut_seal-box">
+        <figcaption><strong>Task 4</strong> — Sealed-box opening</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/task_cleaning.mp4" type="video/mp4" />
-        </video>
-        <figcaption><strong>T5</strong> — Surface cleaning on an industrial handle</figcaption>
+      <figure class="video-frame compare" data-src="static/videos/task_rgb_rgba/clean_surface">
+        <figcaption><strong>Task 5</strong> — Surface cleaning on an industrial handle</figcaption>
       </figure>
     </div>
   </div>
 </section>
+
+<script>
+  // Split-slider comparator (task tiles) + universal audio manager.
+  // Only one video on the page may be unmuted at a time; every video gets a
+  // corner audio button (auto-injected for non-comparator videos).
+  (function () {
+    const registeredButtons = new Set();
+    let activeVideo = null;
+    function silenceAll() {
+      document.querySelectorAll('video').forEach(v => { v.muted = true; });
+      registeredButtons.forEach(b => b.setAttribute('aria-pressed', 'false'));
+      activeVideo = null;
+    }
+    function playAudioFrom(video, button) {
+      if (activeVideo === video) { silenceAll(); return; }
+      silenceAll();
+      video.muted = false;
+      video.volume = 1;
+      const p = video.play();
+      if (p && p.catch) p.catch(() => {});
+      button.setAttribute('aria-pressed', 'true');
+      activeVideo = video;
+    }
+    const AUDIO_ICONS = `
+      <svg class="ic-mute" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
+        <path d="M16 8l6 8M22 8l-6 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+      </svg>
+      <svg class="ic-sound" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+        <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>
+        <path d="M16 8c1.5 1 2.5 2.5 2.5 4S17.5 15 16 16M19 5c3 2 4.5 4.5 4.5 7s-1.5 5-4.5 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+      </svg>`;
+    function makeAudioButton() {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'audio-btn';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-label', 'Play audio');
+      btn.innerHTML = AUDIO_ICONS;
+      return btn;
+    }
+    function attachAudioButton(video, container) {
+      const btn = makeAudioButton();
+      container.appendChild(btn);
+      btn.addEventListener('click', (e) => { e.stopPropagation(); playAudioFrom(video, btn); });
+      registeredButtons.add(btn);
+      return btn;
+    }
+
+    const tiles = document.querySelectorAll('.video-frame.compare');
+    tiles.forEach(tile => {
+      const base = tile.dataset.src.replace(/\/$/, '');
+      const caption = tile.querySelector('figcaption');
+      const viewport = document.createElement('div');
+      viewport.className = 'compare-viewport';
+      viewport.style.setProperty('--pos', '50%');
+      viewport.innerHTML = `
+        <video class="cmp-a" autoplay muted loop playsinline preload="auto"><source src="${base}/rgb.mp4"  type="video/mp4"></video>
+        <video class="cmp-b" autoplay muted loop playsinline preload="auto"><source src="${base}/rgbs.mp4" type="video/mp4"></video>
+        <span class="cmp-label cmp-label-l">RGBA</span>
+        <span class="cmp-label cmp-label-r">RGB</span>
+        <div class="cmp-handle" role="slider" tabindex="0"
+             aria-label="Reveal RGB vs RGBA" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+          <div class="cmp-line"></div>
+          <div class="cmp-knob" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <path d="M8 6l-4 6 4 6M16 6l4 6-4 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      `;
+      tile.insertBefore(viewport, caption);
+
+      const handle = viewport.querySelector('.cmp-handle');
+      const videoA = viewport.querySelector('.cmp-a');
+      const videoB = viewport.querySelector('.cmp-b');
+      attachAudioButton(videoA, viewport);
+
+      // Keep the two videos in sync: A is the master, B follows.
+      // Small drift → nudge B's playbackRate; big drift (loop boundary) → hard resync.
+      const HARD_THRESHOLD = 0.30;   // seconds — beyond this, snap
+      const SOFT_THRESHOLD = 0.03;   // seconds — within this, do nothing
+      const NUDGE          = 0.05;   // ±5% rate correction for smooth catch-up
+      function syncFollower() {
+        if (videoA.readyState < 2 || videoB.readyState < 2) return;
+        const dt = videoB.currentTime - videoA.currentTime;
+        const absDt = Math.abs(dt);
+        if (absDt > HARD_THRESHOLD) {
+          videoB.currentTime = videoA.currentTime;
+          videoB.playbackRate = 1;
+        } else if (absDt > SOFT_THRESHOLD) {
+          videoB.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
+        } else {
+          videoB.playbackRate = 1;
+        }
+      }
+      const syncInterval = setInterval(syncFollower, 250);
+      // Force resync at each loop boundary of A (currentTime jumps from ~duration to ~0).
+      videoA.addEventListener('seeked', syncFollower);
+      videoA.addEventListener('timeupdate', () => {
+        if (videoA.currentTime < 0.15 && videoB.currentTime > (videoA.duration || 0) - 0.5) {
+          videoB.currentTime = videoA.currentTime;
+        }
+      });
+      // Start both from 0 once metadata is available, so they begin aligned.
+      const alignStart = () => {
+        if (videoA.readyState >= 2 && videoB.readyState >= 2) {
+          try { videoB.currentTime = videoA.currentTime; } catch (_) {}
+        }
+      };
+      videoA.addEventListener('loadeddata', alignStart);
+      videoB.addEventListener('loadeddata', alignStart);
+
+      const setPos = (pct) => {
+        pct = Math.min(100, Math.max(0, pct));
+        viewport.style.setProperty('--pos', pct + '%');
+        handle.setAttribute('aria-valuenow', Math.round(pct));
+      };
+      const posFromEvent = (e) => {
+        const rect = viewport.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        return (x / rect.width) * 100;
+      };
+
+      let dragging = false;
+      const onDown = (e) => {
+        if (e.target.closest('.audio-btn')) return;   // let the button handle it
+        dragging = true; setPos(posFromEvent(e)); e.preventDefault();
+      };
+      const onMove = (e) => { if (dragging) setPos(posFromEvent(e)); };
+      const onUp   = ()  => { dragging = false; };
+
+      viewport.addEventListener('mousedown', onDown);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup',   onUp);
+      viewport.addEventListener('touchstart', onDown, { passive: false });
+      window.addEventListener('touchmove',    onMove, { passive: false });
+      window.addEventListener('touchend',     onUp);
+
+      handle.addEventListener('keydown', (e) => {
+        const step = e.shiftKey ? 10 : 2;
+        const cur = parseFloat(handle.getAttribute('aria-valuenow')) || 50;
+        if (e.key === 'ArrowLeft')  { setPos(cur - step); e.preventDefault(); }
+        if (e.key === 'ArrowRight') { setPos(cur + step); e.preventDefault(); }
+        if (e.key === 'Home')       { setPos(0);   e.preventDefault(); }
+        if (e.key === 'End')        { setPos(100); e.preventDefault(); }
+      });
+    });
+
+    // ==== Auto-inject an audio button on every other video ====
+    document.querySelectorAll('video').forEach(video => {
+      const parent = video.parentElement;
+      if (!parent) return;
+      // Skip the comparator's inner videos — the tile loop above already attached a button to cmp-a
+      // and cmp-b's audio is never played (only its visuals).
+      if (parent.classList.contains('compare-viewport')) return;
+
+      // .attn-cell is already position:relative — put the button directly inside it.
+      if (parent.classList.contains('attn-cell')) {
+        attachAudioButton(video, parent);
+        return;
+      }
+      // For any other video (teaser, setup, baselines, failures…): wrap it in a
+      // relatively-positioned shell so the button can be anchored to the video's corner,
+      // not to the figure (which also contains the caption).
+      const shell = document.createElement('div');
+      shell.className = 'audio-shell';
+      parent.insertBefore(shell, video);
+      shell.appendChild(video);
+      attachAudioButton(video, shell);
+    });
+  })();
+</script>
 
 <!-- ============ BASELINES ============ -->
 <section class="section alt">
@@ -278,24 +438,61 @@
     <h2>What the Policy Attends To</h2>
     <p class="lede">
       The RGBA-Attention method guides the policy toward critical, task-relevant visual features.
+      Each row compares <strong>Vision-Only</strong> (left) with <strong>RGBA-Attention</strong> (right).
     </p>
-    <div class="grid grid-3">
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/attn_threading.mp4" type="video/mp4" />
-        </video>
+
+    <div class="attn-list">
+      <figure class="attn-row">
+        <div class="attn-pair">
+          <div class="attn-cell">
+            <span class="attn-tag">Vision-Only</span>
+            <video autoplay muted loop playsinline>
+              <source src="static/videos/attn/threading/vision.mp4" type="video/mp4" />
+            </video>
+          </div>
+          <div class="attn-cell">
+            <span class="attn-tag attn-tag-accent">RGBA-Attention</span>
+            <video autoplay muted loop playsinline>
+              <source src="static/videos/attn/threading/rgba.mp4" type="video/mp4" />
+            </video>
+          </div>
+        </div>
         <figcaption>Attends to the cable as it exits the conduit.</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/attn_peeling.mp4" type="video/mp4" />
-        </video>
+
+      <figure class="attn-row">
+        <div class="attn-pair">
+          <div class="attn-cell">
+            <span class="attn-tag">Vision-Only</span>
+            <video autoplay muted loop playsinline>
+              <source src="static/videos/attn/peeling/vision.mp4" type="video/mp4" />
+            </video>
+          </div>
+          <div class="attn-cell">
+            <span class="attn-tag attn-tag-accent">RGBA-Attention</span>
+            <video autoplay muted loop playsinline>
+              <source src="static/videos/attn/peeling/rgba.mp4" type="video/mp4" />
+            </video>
+          </div>
+        </div>
         <figcaption>Attends to glare and speckle on transparent / glossy materials.</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/attn_cleaning.mp4" type="video/mp4" />
-        </video>
+
+      <figure class="attn-row">
+        <div class="attn-pair">
+          <div class="attn-cell">
+            <span class="attn-tag">Vision-Only</span>
+            <video autoplay muted loop playsinline>
+              <source src="static/videos/attn/cleaning/vision.mp4" type="video/mp4" />
+            </video>
+          </div>
+          <div class="attn-cell">
+            <span class="attn-tag attn-tag-accent">RGBA-Attention</span>
+            <video autoplay muted loop playsinline>
+              <source src="static/videos/attn/cleaning/rgba.mp4" type="video/mp4" />
+            </video>
+          </div>
+        </div>
         <figcaption>Ignores visual distractors irrelevant to the task.</figcaption>
       </figure>
     </div>
@@ -348,7 +545,7 @@
   <div class="container narrow">
     <h2>BibTeX</h2>
     <pre class="bibtex"><code>@inproceedings{rgba2026,
-  title     = {RGB+A Robot Perception: Using Acoustic-Video Perception for Robot
+  title     = {RGBA Robot Perception: Using Acoustic-Video Perception for Robot
                Manipulation with Occluded Contact Dynamics},
   author    = {Author, One and Author, Two and Author, Three},
   booktitle = {TBD},

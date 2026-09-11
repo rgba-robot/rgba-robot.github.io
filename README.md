@@ -25,9 +25,9 @@ The page references these files under `static/videos/`. Drop MP4s in with matchi
 | Teaser | `teaser.mp4` |
 | Motivation | `occluded_pushing.mp4`, `occluded_threading.mp4`, `occluded_generic.mp4` |
 | Setup | `setup.mp4` |
-| Tasks | `task_threading.mp4`, `task_grinding.mp4`, `task_peeling.mp4`, `task_boxopen.mp4`, `task_cleaning.mp4` |
+| Tasks (drag-slider comparator per tile) | folder per task under `static/videos/task_rgb_rgba/`, each containing `rgb.mp4` (base) and `rgbs.mp4` (RGBA overlay). Expected folders: `thread_cable/`, `grind_plastic/`, `peel_film/`, `cut_seal-box/`, `clean_surface/`. Rename the folder in `index.html` `data-src=` if you prefer other names. |
 | Baselines | `baseline_vision.mp4`, `ours_rgba.mp4` |
-| Attention | `attn_threading.mp4`, `attn_peeling.mp4`, `attn_cleaning.mp4` |
+| Attention (Vision-Only vs RGBA-Attention pair per example) | folder per example under `static/videos/attn/`, each containing `vision.mp4` and `rgba.mp4`. Expected folders: `threading/`, `peeling/`, `cleaning/`. |
 | Failures | `fail_cleaning.mp4`, `fail_boxcut.mp4` |
 
 Images referenced under `static/images/`:
