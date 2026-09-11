@@ -13,7 +13,7 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 TRUNK_FC, TRUNK_EC = "#eef0f3", "#3f434c"
 DINO_FC, DINO_EC = "#dbe7f6", "#2f6bb0"
 TOK_IMG, TOK_WRIST, TOK_PROP, TOK_ACT = "#9fc0e4", "#cadcef", "#dcdfe4", "#f2d9a9"
-AUD_FC, AUD_EC = "#fce2ca", "#c26a12"          # method 1 = orange
+AUD_FC, AUD_EC = "#fce2ca", "#E0812A"          # method 1 = orange
 HIST_FC, HIST_EC = "#dbe7f6", "#2f6bb0"        # method 2 = blue
 PINK_FC, PINK_EC = "#f6dbe6", "#b03470"        # shared audio pipeline = pink
 LOSS_C = "#b0282d"

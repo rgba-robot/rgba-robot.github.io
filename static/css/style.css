@@ -473,7 +473,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   border-radius: 3px;
   display: inline-block;
 }
-.arch-dot-m1 { background: #c26a12; }   /* method 1 orange (matches figure) */
+.arch-dot-m1 { background: #E0812A; }   /* method 1 orange (matches figure) */
 .arch-dot-m2 { background: #2f6bb0; }   /* method 2 blue */
 
 .arch-figure {
