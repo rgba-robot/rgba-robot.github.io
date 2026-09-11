@@ -279,9 +279,8 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 .compare-mobile[data-mode="rgb"]  .cmp-mobile-rgb  { z-index: 2; }
 .cmp-mobile-toggle {
   position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 10px;
+  right: 10px;
   padding: 0.4rem 0.9rem;
   border: 0;
   border-radius: 999px;
@@ -295,7 +294,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   cursor: pointer;
   z-index: 3;
 }
-.cmp-mobile-toggle:active { transform: translateX(-50%) scale(0.97); }
+.cmp-mobile-toggle:active { transform: scale(0.97); }
 
 /* --- Utility: opt a specific tile out of "cover" (crop) into "contain" (fit full frame) --- */
 /* Add class="fit-contain" to a .fail-tile / .res-tile / .video-frame (or the <video> itself)
