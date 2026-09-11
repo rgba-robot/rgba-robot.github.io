@@ -365,10 +365,59 @@
       return btn;
     }
 
+    // On narrow/mobile viewports, iOS Safari can't reliably decode both cmp-a and cmp-b
+    // simultaneously (and dragging a hair-line slider with a finger is fiddly anyway).
+    // Swap the split-slider for a single-video RGBA/RGB toggle button on mobile.
+    const IS_MOBILE = window.matchMedia('(max-width: 720px)').matches;
+
     const tiles = document.querySelectorAll('.video-frame.compare');
     tiles.forEach(tile => {
       const base = tile.dataset.src.replace(/\/$/, '');
       const caption = tile.querySelector('figcaption');
+
+      if (IS_MOBILE) {
+        const viewport = document.createElement('div');
+        viewport.className = 'compare-viewport compare-mobile';
+        // Start on RGBA (the "ours" view) so the pink label makes sense.
+        viewport.innerHTML = `
+          <video class="cmp-mobile" autoplay muted loop playsinline preload="metadata">
+            <source src="${base}/rgbs.mp4" type="video/mp4">
+          </video>
+          <span class="cmp-label cmp-label-l">RGBA</span>
+          <button type="button" class="cmp-mobile-toggle" aria-pressed="true">Show RGB</button>
+        `;
+        tile.insertBefore(viewport, caption);
+
+        const video  = viewport.querySelector('.cmp-mobile');
+        const source = video.querySelector('source');
+        const label  = viewport.querySelector('.cmp-label-l');
+        const toggle = viewport.querySelector('.cmp-mobile-toggle');
+        attachAudioButton(video, viewport);
+
+        let showingRGBA = true;
+        toggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showingRGBA = !showingRGBA;
+          const t = video.currentTime;
+          source.src = showingRGBA ? `${base}/rgbs.mp4` : `${base}/rgb.mp4`;
+          video.load();
+          // Resume from the same timestamp so the comparison feels continuous.
+          const resume = () => {
+            try { video.currentTime = t; } catch (_) {}
+            const p = video.play(); if (p && p.catch) p.catch(() => {});
+            video.removeEventListener('loadedmetadata', resume);
+          };
+          video.addEventListener('loadedmetadata', resume);
+          label.textContent   = showingRGBA ? 'RGBA' : 'RGB';
+          label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
+          toggle.textContent = showingRGBA ? 'Show RGB' : 'Show RGBA';
+          toggle.setAttribute('aria-pressed', showingRGBA);
+        });
+
+        return;   // skip the desktop slider setup for this tile
+      }
+
+      // ---------- desktop split-slider (unchanged) ----------
       const viewport = document.createElement('div');
       viewport.className = 'compare-viewport';
       viewport.style.setProperty('--pos', '50%');
