@@ -372,6 +372,25 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 }
 .p-tag-accent { background: var(--accent); }
 
+.p-formula {
+  padding: 0.6rem 0.9rem;
+  border-top: 1px solid var(--line);
+  background: var(--bg-alt);
+  font-size: 0.95rem;
+  color: var(--ink);
+  overflow-x: auto;
+  text-align: center;
+}
+.p-formula .katex { font-size: 1em; }
+
+.p-where {
+  margin: 1.25rem auto 0;
+  max-width: 780px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
 @media (max-width: 780px) {
   .p-diagram {
     grid-template-columns: 1fr;
