@@ -300,26 +300,35 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   background: #0b0c0f;
 }
 
-/* --- Autonomous-rollout badge (auto-injected on rollout videos, bottom-left) --- */
-.rollout-badge {
+/* --- Autonomous-rollout badge: pure CSS on any tile inside a data-rollout section --- */
+[data-rollout="true"] .res-tile,
+[data-rollout="true"] .attn-cell,
+[data-rollout="true"] .video-frame { position: relative; }
+
+[data-rollout="true"] .res-tile::after,
+[data-rollout="true"] .attn-cell::after,
+[data-rollout="true"] .video-frame::after {
+  content: "🤖 Autonomous Rollout";
   position: absolute;
   bottom: 8px;
   left: 8px;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
   padding: 4px 9px;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   color: #fff;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.65);
   border-radius: 999px;
   line-height: 1.4;
-  backdrop-filter: blur(4px);
-  user-select: none;
   pointer-events: none;
+  user-select: none;
+  z-index: 3;
+  white-space: nowrap;
+}
+/* .video-frame has a figcaption below the video, so put the badge over the video's top-left instead */
+[data-rollout="true"] .video-frame::after {
+  top: 8px;
+  bottom: auto;
 }
 
 /* --- Baselines & Results: task selector + 4-method grid --- */
