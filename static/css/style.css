@@ -373,7 +373,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 .p-tag-accent { background: var(--accent); }
 
 .p-formula {
-  padding: 0.5rem 0.75rem;
+  padding: 0.15rem 0.75rem;
   border-top: 1px solid var(--line);
   background: var(--bg-alt);
   font-size: 1.05rem;
@@ -382,6 +382,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   text-align: center;
 }
 .p-formula .katex { font-size: 1.2em; }
+.p-formula .katex-display { margin: 0.15em 0; }
 
 .p-left {
   display: flex;
