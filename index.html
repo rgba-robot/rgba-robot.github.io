@@ -57,9 +57,10 @@
   <div class="container">
     <figure class="video-frame">
       <!-- Robot RGB video; fade in acoustic when saying "A", then title -->
-      <video autoplay muted loop playsinline poster="static/images/teaser_poster.jpg">
+      <!-- <video autoplay muted loop playsinline poster="static/images/teaser_poster.jpg">
         <source src="static/videos/teaser.mp4" type="video/mp4" />
-      </video>
+      </video> -->
+      <p>**main video comes here (placeholder for now)**</p>
       <figcaption>
         We present <strong>RGBA robot perception</strong> — using acoustic-video as a robot perception to improve manipulation performance under occluded contact dynamics.
       </figcaption>
@@ -160,8 +161,8 @@
       <div class="p-left">
         <p class="p-desc">
           From an RGB frame + microphone array, we derive two acoustic-beamforming
-          representations: a <em>History</em> view (past contact evidence accumulated
-          up to now) and a <em>Future</em> view (max-pooled evidence going onward),
+          representations: a <em>History</em> representation (past acoustics accumulated
+          up to now) and a <em>Future</em> representation (future acoustics going onward),
           where $t$ is the elapsed time and $T$ is the maximum teleoperated
           demonstration length.
         </p>
@@ -169,7 +170,7 @@
           <video autoplay muted loop playsinline>
             <source src="static/videos/task_rgb_rgba/thread_cable/rgb.mp4" type="video/mp4" />
           </video>
-          <figcaption>RGB input</figcaption>
+          <figcaption>Reference View</figcaption>
         </figure>
       </div>
 
@@ -449,6 +450,52 @@
       parent.insertBefore(shell, video);
       shell.appendChild(video);
       attachAudioButton(video, shell);
+    });
+
+    // ==== Keep perception-input diagram videos in sync (RGB source is master) ====
+    document.querySelectorAll('.p-diagram').forEach(diagram => {
+      const master    = diagram.querySelector('.p-source video');
+      const followers = diagram.querySelectorAll('.p-output video');
+      if (!master || followers.length === 0) return;
+
+      const HARD = 0.30, SOFT = 0.03, NUDGE = 0.05;
+      function tick() {
+        if (master.readyState < 2) return;
+        followers.forEach(f => {
+          if (f.readyState < 2) return;
+          const dt    = f.currentTime - master.currentTime;
+          const absDt = Math.abs(dt);
+          if (absDt > HARD) {
+            f.currentTime = master.currentTime;
+            f.playbackRate = 1;
+          } else if (absDt > SOFT) {
+            f.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
+          } else {
+            f.playbackRate = 1;
+          }
+        });
+      }
+      setInterval(tick, 250);
+
+      master.addEventListener('seeked', tick);
+      master.addEventListener('timeupdate', () => {
+        // At master's loop wrap: snap followers to 0 if they haven't wrapped yet.
+        if (master.currentTime < 0.15) {
+          const dur = master.duration || 0;
+          followers.forEach(f => {
+            if (f.currentTime > dur - 0.5) f.currentTime = master.currentTime;
+          });
+        }
+      });
+
+      const alignAll = () => {
+        if (master.readyState < 2) return;
+        followers.forEach(f => {
+          if (f.readyState >= 2) { try { f.currentTime = master.currentTime; } catch (_) {} }
+        });
+      };
+      master.addEventListener('loadeddata', alignAll);
+      followers.forEach(f => f.addEventListener('loadeddata', alignAll));
     });
   })();
 </script>
