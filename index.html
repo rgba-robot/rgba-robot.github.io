@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RGB+A Robot Perception</title>
+<meta name="description" content="Using Acoustic-Video Perception for Robot Manipulation with Occluded Contact Dynamics." />
+<link rel="stylesheet" href="static/css/style.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="container">
+    <h1 class="title">
+      <span class="rgb">RGB<span class="a">A</span> Robot Perception
+    </h1>
+    <p class="subtitle">
+      Using Acoustic-Video Perception for Robot Manipulation<br />
+      with Occluded Contact Dynamics
+    </p>
+
+    <ul class="authors">
+      <li><a href="#">Anonymous Authors<sup>1</sup></a></li>
+    </ul>
+    <ul class="affiliations">
+      <li><sup>1</sup>Anonymous Institution</li>
+    </ul>
+
+    <div class="links">
+      <a class="btn" href="#"><span>📄</span> Paper</a>
+      <a class="btn" href="#"><span>💻</span> Code (Coming Soon)</a>
+      <!-- <a class="btn" href="#"><span>▶</span> Video</a> -->
+      <!-- <a class="btn" href="#"><span>📊</span> Data</a> -->
+    </div>
+  </div>
+</header>
+
+<!-- ============ TEASER ============ -->
+<section class="section teaser">
+  <div class="container">
+    <figure class="video-frame">
+      <!-- Robot RGB video; fade in acoustic when saying "A", then title -->
+      <video autoplay muted loop playsinline poster="static/images/teaser_poster.jpg">
+        <source src="static/videos/teaser.mp4" type="video/mp4" />
+      </video>
+      <figcaption>
+        We present <strong>RGB+A robot perception</strong> — audio you can <em>see</em>, overlaid on video.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ ABSTRACT ============ -->
+<section class="section">
+  <div class="container narrow">
+    <h2>Abstract</h2>
+    <p>
+      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates \textit{vibroacoustic} sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an \textit{RGBA} video stream (\textit{A} for Acoustic). We present two approaches to using RGBA video: 1) RGBA-Attention and 2) RGBA-History. Across five contact-rich manipulation tasks, experiments suggest that acoustic video improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
+    </p>
+  </div>
+</section>
+
+<!-- ============ MOTIVATION ============ -->
+<section class="section alt">
+  <div class="container">
+    <h2>Occluded Contact Dynamics</h2>
+    <p class="lede">
+      Pushing… occluded. Threading… occluded. Almost every contact-rich task hides its most
+      informative moments from a camera.
+    </p>
+    <div class="grid grid-3">
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/occluded_pushing.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Pushing — contact patch hidden by the object.</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/occluded_threading.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Threading — cable tip disappears inside the conduit.</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/occluded_generic.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Surface contact — friction cues, no visible signal.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RELATED WORK ============ -->
+<section class="section">
+  <div class="container narrow">
+    <h2>Prior Audio-Augmented Manipulation</h2>
+    <figure class="video-frame small">
+      <img src="static/images/spectrogram_prior.png" alt="Spectrogram-based prior work" />
+      <figcaption>
+        Prior work (e.g., ManiWAV<sup><a href="#ref1">1</a></sup> and related<sup><a href="#ref2">2</a></sup>)
+        consumes audio as a single-channel waveform or spectrogram — carrying <em>when</em>, but not
+        <em>where</em>.
+      </figcaption>
+    </figure>
+    <p class="hook">But… what if robots could also <em>see</em> the sound?</p>
+  </div>
+</section>
+
+<!-- ============ SETUP ============ -->
+<section class="section alt">
+  <div class="container">
+    <h2>Acoustic Camera Setup</h2>
+    <div class="grid grid-2">
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/setup.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Robot workcell with an acoustic camera mounted alongside the RGB view.</figcaption>
+      </figure>
+      <div>
+        <p>
+          A low-cost microphone array captures the sound field around the workspace. Combined with
+          a co-registered RGB camera, we can localize sound sources over time and project them onto
+          the same image plane the policy already sees.
+        </p>
+        <ul class="feature-list">
+          <li>Microphone array — off-the-shelf, calibrated to the RGB frame</li>
+          <li>Acoustic beamforming — spatial audio in the image plane</li>
+          <li>RGBA overlay — a drop-in replacement for RGB observations</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BEAMFORMING ============ -->
+<section class="section">
+  <div class="container">
+    <h2>How Beamforming Works</h2>
+    <figure class="diagram">
+      <img src="static/images/beamforming.svg" alt="Illustration of acoustic beamforming producing an RGBA frame" />
+      <figcaption>
+        Time-delayed sums across microphones steer virtual "listening beams" through the scene. For
+        each pixel direction, we integrate acoustic energy, then overlay the resulting heatmap on
+        the RGB frame to produce an <strong>RGBA</strong> stream.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ METHODS ============ -->
+<section class="section alt">
+  <div class="container">
+    <h2>Two Methods for Learning from RGBA</h2>
+    <p class="lede">
+      We present two approaches to leverage acoustic video for imitation learning policies.
+    </p>
+
+    <div class="method">
+      <h3>1 &middot; RGBA-History</h3>
+      <div class="grid grid-2">
+        <figure class="diagram">
+          <img src="static/images/method_history.svg" alt="RGBA-History method diagram" />
+          <figcaption>Accumulated RGBA frames from the past → policy observation.</figcaption>
+        </figure>
+        <p>
+          Accumulated acoustic video is used directly as a policy observation, letting the model
+          track task progress over time from the growing evidence of contact events.
+        </p>
+      </div>
+    </div>
+
+    <div class="method">
+      <h3>2 &middot; RGBA-Attention</h3>
+      <div class="grid grid-2">
+        <figure class="diagram">
+          <img src="static/images/method_attention.svg" alt="RGBA-Attention method diagram" />
+          <figcaption>RGBA frames accumulated forward + attention supervised on active contact regions.</figcaption>
+        </figure>
+        <p>
+          RGBA frames are accumulated in the opposite direction and remaining acoustic signals are
+          max-pooled onward. We then supervise the model's visual attention to focus computation on
+          active contact regions.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TASKS ============ -->
+<section class="section">
+  <div class="container">
+    <h2>Five Vibroacoustic Tasks</h2>
+    <p class="lede">
+      We evaluate on five representative manipulation tasks that passively and naturally make sound
+      during manipulation.
+    </p>
+    <div class="grid grid-5 tasks">
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/task_threading.mp4" type="video/mp4" />
+        </video>
+        <figcaption><strong>T1</strong> — Threading cable into a conduit</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/task_grinding.mp4" type="video/mp4" />
+        </video>
+        <figcaption><strong>T2</strong> — Plastic grinding</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/task_peeling.mp4" type="video/mp4" />
+        </video>
+        <figcaption><strong>T3</strong> — Transparent film peeling</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/task_boxopen.mp4" type="video/mp4" />
+        </video>
+        <figcaption><strong>T4</strong> — Sealed-box opening</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/task_cleaning.mp4" type="video/mp4" />
+        </video>
+        <figcaption><strong>T5</strong> — Surface cleaning on an industrial handle</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BASELINES ============ -->
+<section class="section alt">
+  <div class="container">
+    <h2>Baselines &amp; Results</h2>
+    <p>
+      We compare our two RGBA perception methods to two popular baselines:
+      <strong>Vision-Only</strong> and a policy that consumes <strong>mono-channel audio</strong>.
+    </p>
+
+    <div class="grid grid-2 side-by-side">
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/baseline_vision.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Vision-Only baseline</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/ours_rgba.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Ours — RGBA</figcaption>
+      </figure>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-num">+20.5%</div>
+        <div class="stat-label">Task success rate<br /><span>vs. baselines, averaged across tasks</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">+17.5%</div>
+        <div class="stat-label">Task progress<br /><span>vs. baselines, averaged across tasks</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ATTENTION ============ -->
+<section class="section">
+  <div class="container">
+    <h2>What the Policy Attends To</h2>
+    <p class="lede">
+      The RGBA-Attention method guides the policy toward critical, task-relevant visual features.
+    </p>
+    <div class="grid grid-3">
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/attn_threading.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Attends to the cable as it exits the conduit.</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/attn_peeling.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Attends to glare and speckle on transparent / glossy materials.</figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/attn_cleaning.mp4" type="video/mp4" />
+        </video>
+        <figcaption>Ignores visual distractors irrelevant to the task.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAILURE MODES ============ -->
+<section class="section alt">
+  <div class="container">
+    <h2>Failure Modes</h2>
+    <p class="lede">A few characteristic failures we observed:</p>
+    <div class="grid grid-2">
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/fail_cleaning.mp4" type="video/mp4" />
+        </video>
+        <figcaption>
+          <strong>Surface cleaning</strong> — no contact detected, or contact detected but the
+          policy cannot recover.
+        </figcaption>
+      </figure>
+      <figure class="video-frame">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/fail_boxcut.mp4" type="video/mp4" />
+        </video>
+        <figcaption>
+          <strong>Box cutting</strong> — a few millimeters of tape left uncut.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONCLUSION ============ -->
+<!-- <section class="section">
+  <div class="container narrow">
+    <h2>Takeaway</h2>
+    <p>
+      We believe <strong>acoustic video</strong> is a promising robot perception for diverse
+      vibroacoustic manipulation tasks. For more details, please see our paper.
+    </p>
+    <div class="links center">
+      <a class="btn primary" href="#">Read the Paper</a>
+    </div>
+  </div>
+</section> -->
+
+<!-- ============ BIBTEX ============ -->
+<!-- <section class="section alt">
+  <div class="container narrow">
+    <h2>BibTeX</h2>
+    <pre class="bibtex"><code>@inproceedings{rgba2026,
+  title     = {RGB+A Robot Perception: Using Acoustic-Video Perception for Robot
+               Manipulation with Occluded Contact Dynamics},
+  author    = {Author, One and Author, Two and Author, Three},
+  booktitle = {TBD},
+  year      = {2026}
+}</code></pre>
+  </div>
+</section> -->
+
+<!-- ============ FOOTER ============ -->
+<!-- <footer class="footer">
+  <div class="container narrow">
+    <p id="ref1"><sup>1</sup> ManiWAV citation placeholder.</p>
+    <p id="ref2"><sup>2</sup> Related work citation placeholder.</p>
+    <p class="fine">
+      Website template — feel free to reuse. Built with plain HTML/CSS.
+    </p>
+  </div>
+</footer> -->
+
+</body>
+</html>
