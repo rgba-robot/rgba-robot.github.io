@@ -378,39 +378,43 @@
       if (IS_MOBILE) {
         const viewport = document.createElement('div');
         viewport.className = 'compare-viewport compare-mobile';
-        // Start on RGBA (the "ours" view) so the pink label makes sense.
+        viewport.dataset.mode = 'rgba';
+        // Both videos are in the DOM and preloaded. Only the visible one plays;
+        // the other stays paused so iOS isn't decoding two streams, but its bytes
+        // are already cached so the toggle is instant.
         viewport.innerHTML = `
-          <video class="cmp-mobile" autoplay muted loop playsinline preload="metadata">
+          <video class="cmp-mobile cmp-mobile-rgba" autoplay muted loop playsinline preload="auto">
             <source src="${base}/rgbs.mp4" type="video/mp4">
+          </video>
+          <video class="cmp-mobile cmp-mobile-rgb"          muted loop playsinline preload="auto">
+            <source src="${base}/rgb.mp4"  type="video/mp4">
           </video>
           <span class="cmp-label cmp-label-l">RGBA</span>
           <button type="button" class="cmp-mobile-toggle" aria-pressed="true">Show RGB</button>
         `;
         tile.insertBefore(viewport, caption);
 
-        const video  = viewport.querySelector('.cmp-mobile');
-        const source = video.querySelector('source');
-        const label  = viewport.querySelector('.cmp-label-l');
-        const toggle = viewport.querySelector('.cmp-mobile-toggle');
-        attachAudioButton(video, viewport);
+        const videoRGBA = viewport.querySelector('.cmp-mobile-rgba');
+        const videoRGB  = viewport.querySelector('.cmp-mobile-rgb');
+        const label     = viewport.querySelector('.cmp-label-l');
+        const toggle    = viewport.querySelector('.cmp-mobile-toggle');
+        // Only wire audio to the currently-visible one at a time.
+        attachAudioButton(videoRGBA, viewport);
 
         let showingRGBA = true;
         toggle.addEventListener('click', (e) => {
           e.stopPropagation();
           showingRGBA = !showingRGBA;
-          const t = video.currentTime;
-          source.src = showingRGBA ? `${base}/rgbs.mp4` : `${base}/rgb.mp4`;
-          video.load();
-          // Resume from the same timestamp so the comparison feels continuous.
-          const resume = () => {
-            try { video.currentTime = t; } catch (_) {}
-            const p = video.play(); if (p && p.catch) p.catch(() => {});
-            video.removeEventListener('loadedmetadata', resume);
-          };
-          video.addEventListener('loadedmetadata', resume);
-          label.textContent   = showingRGBA ? 'RGBA' : 'RGB';
+          const outgoing = showingRGBA ? videoRGB  : videoRGBA;
+          const incoming = showingRGBA ? videoRGBA : videoRGB;
+          const t = outgoing.currentTime;
+          outgoing.pause();
+          try { incoming.currentTime = t; } catch (_) {}
+          const p = incoming.play(); if (p && p.catch) p.catch(() => {});
+          viewport.dataset.mode  = showingRGBA ? 'rgba' : 'rgb';
+          label.textContent      = showingRGBA ? 'RGBA' : 'RGB';
           label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
-          toggle.textContent = showingRGBA ? 'Show RGB' : 'Show RGBA';
+          toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show RGBA';
           toggle.setAttribute('aria-pressed', showingRGBA);
         });
 
@@ -586,11 +590,11 @@
         entries.forEach(entry => {
           const v = entry.target;
           if (entry.isIntersecting && entry.intersectionRatio > 0.25) {
-            // Coming into view — attempt to play. If it fails (autoplay policy), ignore silently.
+            // Skip CSS-hidden videos (e.g. the inactive side of a mobile RGBA/RGB toggle).
+            if (getComputedStyle(v).visibility === 'hidden') return;
             const p = v.play();
             if (p && p.catch) p.catch(() => {});
           } else {
-            // Leaving view — pause to free the decoder for the videos actually on screen.
             if (!v.paused) v.pause();
           }
         });

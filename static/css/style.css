@@ -264,7 +264,9 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 .cmp-label-l { left: 8px; background: var(--accent); }   /* RGBA side — our pink */
 .cmp-label-r { right: 8px; }
 
-/* Mobile fallback for the split-slider: a single-video RGBA/RGB toggle button */
+/* Mobile fallback for the split-slider: pre-loaded RGBA/RGB pair with a tap toggle.
+   Both videos are in the DOM (cached, first-frame decoded), but only the active
+   one is visible AND playing at any time. */
 .compare-mobile { cursor: default; }
 .compare-mobile .cmp-mobile {
   position: absolute; inset: 0;
@@ -272,7 +274,10 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   display: block;
   object-fit: cover;
   background: #0b0c0f;
+  visibility: hidden;   /* pre-loaded but hidden by default */
 }
+.compare-mobile[data-mode="rgba"] .cmp-mobile-rgba,
+.compare-mobile[data-mode="rgb"]  .cmp-mobile-rgb  { visibility: visible; z-index: 1; }
 .cmp-mobile-toggle {
   position: absolute;
   bottom: 10px;
