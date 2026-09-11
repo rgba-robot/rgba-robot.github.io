@@ -586,18 +586,49 @@
       followers.forEach(f => f.addEventListener('loadeddata', alignAll));
     });
 
-    // ==== Play-only-when-visible: pauses off-screen videos so mobile doesn't choke ====
-    // Especially important on iOS Safari which caps concurrent video decode.
+    // ==== Play-only-when-visible, group-aware ====
+    // Individual videos: play/pause based on their own visibility.
+    // Grouped videos (bundled comparisons): if ANY member is visible, all play; if
+    // none are visible, all pause. Keeps side-by-side / stacked pairs in step
+    // even when the group is taller than the viewport.
     if ('IntersectionObserver' in window) {
+      const GROUP_SELECTORS = ['.attn-row', '.res-grid', '.p-diagram'];
+      const videoGroup   = new Map();   // <video> -> group container
+      const groupMembers = new Map();   // container -> Set of <video>
+      GROUP_SELECTORS.forEach(sel => {
+        document.querySelectorAll(sel).forEach(g => {
+          const vs = g.querySelectorAll('video');
+          if (!vs.length) return;
+          groupMembers.set(g, new Set(vs));
+          vs.forEach(v => videoGroup.set(v, g));
+        });
+      });
+
+      const visible = new Set();
+      function apply(v, shouldPlay) {
+        if (shouldPlay) {
+          if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+        } else {
+          if (!v.paused) v.pause();
+        }
+      }
+
       const io = new IntersectionObserver((entries) => {
+        const groupsToRefresh = new Set();
+        const soloUpdates     = [];
         entries.forEach(entry => {
           const v = entry.target;
-          if (entry.isIntersecting && entry.intersectionRatio > 0.25) {
-            const p = v.play();
-            if (p && p.catch) p.catch(() => {});
-          } else {
-            if (!v.paused) v.pause();
-          }
+          const isVis = entry.isIntersecting && entry.intersectionRatio > 0.25;
+          if (isVis) visible.add(v); else visible.delete(v);
+          const g = videoGroup.get(v);
+          if (g) groupsToRefresh.add(g);
+          else   soloUpdates.push({ v, isVis });
+        });
+        soloUpdates.forEach(({ v, isVis }) => apply(v, isVis));
+        groupsToRefresh.forEach(g => {
+          const vs = groupMembers.get(g);
+          const anyVis = [...vs].some(v => visible.has(v));
+          vs.forEach(v => apply(v, anyVis));
         });
       }, { threshold: [0, 0.25, 0.5] });
 
