@@ -379,14 +379,14 @@
         const viewport = document.createElement('div');
         viewport.className = 'compare-viewport compare-mobile';
         viewport.dataset.mode = 'rgba';
-        // Both videos are in the DOM and preloaded. Only the visible one plays;
-        // the other stays paused so iOS isn't decoding two streams, but its bytes
-        // are already cached so the toggle is instant.
+        // Both videos autoplay continuously; only the active one sits on top.
+        // Toggle just swaps z-index — no pause/play/seek, so no black frame and
+        // no drift between the two streams.
         viewport.innerHTML = `
           <video class="cmp-mobile cmp-mobile-rgba" autoplay muted loop playsinline preload="auto">
             <source src="${base}/rgbs.mp4" type="video/mp4">
           </video>
-          <video class="cmp-mobile cmp-mobile-rgb"          muted loop playsinline preload="auto">
+          <video class="cmp-mobile cmp-mobile-rgb"  autoplay muted loop playsinline preload="auto">
             <source src="${base}/rgb.mp4"  type="video/mp4">
           </video>
           <span class="cmp-label cmp-label-l">RGBA</span>
@@ -398,19 +398,22 @@
         const videoRGB  = viewport.querySelector('.cmp-mobile-rgb');
         const label     = viewport.querySelector('.cmp-label-l');
         const toggle    = viewport.querySelector('.cmp-mobile-toggle');
-        // Only wire audio to the currently-visible one at a time.
         attachAudioButton(videoRGBA, viewport);
+
+        // Hard-resync every 500ms: playbackRate tweaks aren't reliable on iOS.
+        setInterval(() => {
+          if (videoRGBA.readyState < 2 || videoRGB.readyState < 2) return;
+          if (videoRGBA.paused || videoRGB.paused) return;
+          const dt = videoRGB.currentTime - videoRGBA.currentTime;
+          if (Math.abs(dt) > 0.15) {
+            try { videoRGB.currentTime = videoRGBA.currentTime; } catch (_) {}
+          }
+        }, 500);
 
         let showingRGBA = true;
         toggle.addEventListener('click', (e) => {
           e.stopPropagation();
           showingRGBA = !showingRGBA;
-          const outgoing = showingRGBA ? videoRGB  : videoRGBA;
-          const incoming = showingRGBA ? videoRGBA : videoRGB;
-          const t = outgoing.currentTime;
-          outgoing.pause();
-          try { incoming.currentTime = t; } catch (_) {}
-          const p = incoming.play(); if (p && p.catch) p.catch(() => {});
           viewport.dataset.mode  = showingRGBA ? 'rgba' : 'rgb';
           label.textContent      = showingRGBA ? 'RGBA' : 'RGB';
           label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
@@ -590,8 +593,6 @@
         entries.forEach(entry => {
           const v = entry.target;
           if (entry.isIntersecting && entry.intersectionRatio > 0.25) {
-            // Skip CSS-hidden videos (e.g. the inactive side of a mobile RGBA/RGB toggle).
-            if (getComputedStyle(v).visibility === 'hidden') return;
             const p = v.play();
             if (p && p.catch) p.catch(() => {});
           } else {
@@ -703,9 +704,9 @@
         'rgba-history':   'TODO',
       },
       peeling:   {
-        'vision-only':    'Policy often grasp the transparent film unsteadily.',
-        'maniwav':        'TODO',
-        'rgba-attention': 'Success after retry.',
+        'vision-only':    'Policy often grasp the phone body together with the film.',
+        'maniwav':        'Policy fails to grasp the transparent film',
+        'rgba-attention': 'Success.',
         'rgba-history':   'Success.',
       },
       cutting:   {
@@ -716,7 +717,7 @@
       },
       cleaning:  {
         'vision-only':    'Policy clean the surface partialy.',
-        'maniwav':        'TODO',
+        'maniwav':        'Policy clean the surface partialy.',
         'rgba-attention': 'Success under a visual distractor (yellow adhesive remover).',
         'rgba-history':   'Success under a visual distractor (yellow adhesive remover).',
       },
