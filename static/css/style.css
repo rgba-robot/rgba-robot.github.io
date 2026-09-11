@@ -378,11 +378,12 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   display: flex;
   flex-direction: column;
 }
-/* Our RGBA methods get a colored border — blue for Attention, pink for History */
-.res-tile[data-method="rgba-attention"] { border: 5px solid #3D77D2; }
-.res-tile[data-method="rgba-history"]   { border: 5px solid #e0308c; }
+/* Our RGBA methods: orange for Attention, blue for History */
+.res-tile[data-method="rgba-attention"] { border: 5px solid #E0812A; }
+.res-tile[data-method="rgba-history"]   { border: 5px solid #3D77D2; }
 /* Per-method tag color overrides the shared accent */
-.res-tile[data-method="rgba-attention"] .res-tag-accent { background: #3D77D2; }
+.res-tile[data-method="rgba-attention"] .res-tag-accent { background: #E0812A; }
+.res-tile[data-method="rgba-history"]   .res-tag-accent { background: #3D77D2; }
 /* Media area: holds the 16:9 video and all corner overlays (tag, badge, audio) */
 .res-media {
   position: relative;
@@ -473,8 +474,8 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   border-radius: 3px;
   display: inline-block;
 }
-.arch-dot-m1 { background: #3D77D2; }   /* method 1 = RGBA-Attention (blue) */
-.arch-dot-m2 { background: #2f6bb0; }   /* method 2 blue */
+.arch-dot-m1 { background: #E0812A; }   /* method 1 = RGBA-Attention (orange) */
+.arch-dot-m2 { background: #3D77D2; }   /* method 2 = RGBA-History  (blue) */
 
 .arch-figure {
   padding: 0.75rem;
