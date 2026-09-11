@@ -472,8 +472,9 @@
       if (parent.classList.contains('compare-viewport')) return;   // comparator handled above
       if (parent.classList.contains('p-output')) return;           // representations are silent
 
-      if (parent.classList.contains('attn-cell')) { attachAudioButton(video, parent); return; }
-      if (parent.classList.contains('res-media')) { attachAudioButton(video, parent); return; }
+      if (parent.classList.contains('attn-cell'))  { attachAudioButton(video, parent); return; }
+      if (parent.classList.contains('res-media'))  { attachAudioButton(video, parent); return; }
+      if (parent.classList.contains('fail-media')) { attachAudioButton(video, parent); return; }
 
       // Any other video (teaser, setup, baselines, failures…): wrap it in a positioned shell.
       const shell = document.createElement('div');
@@ -616,11 +617,36 @@
     // Captions per (task, method). Missing keys fall back to CAPTIONS._defaults[method].
     // Fill in task-specific blurbs below as they become available.
     const CAPTIONS = {
-      threading: {},
-      grinding:  {},
-      peeling:   {},
-      cutting:   {},
-      cleaning:  {},
+      threading: {
+        'vision-only':    'False Negative: Policy fails to detect the cable exit and continue threading.',
+        'maniwav':        'False positive: Policy terminates threading too early before the cable exits.',
+        'rgba-attention': 'Success under a visual distractor (blue box bottom right).',
+        'rgba-history':   'Success under a visual distractor (blue box bottom right).',
+      },
+      grinding:  {
+        'vision-only':    'TODO',
+        'maniwav':        'TODO',
+        'rgba-attention': 'TODO',
+        'rgba-history':   'TODO',
+      },
+      peeling:   {
+        'vision-only':    'Policy often grasp the transparent film unsteadily.',
+        'maniwav':        'TODO',
+        'rgba-attention': 'Success after retry.',
+        'rgba-history':   'Success.',
+      },
+      cutting:   {
+        'vision-only':    'Policy fails precise insertion of blade + not enough pressure',
+        'maniwav':        'TODO',
+        'rgba-attention': 'Successful insertion and cutting.',
+        'rgba-history':   'Successful insertion and cutting.',
+      },
+      cleaning:  {
+        'vision-only':    'Policy clean the surface partialy.',
+        'maniwav':        'TODO',
+        'rgba-attention': 'Success under a visual distractor (yellow adhesive remover).',
+        'rgba-history':   'Success under a visual distractor (yellow adhesive remover).',
+      },
       _defaults: {
         'vision-only':    'Baseline — trained on RGB frames alone.',
         'maniwav':        'Baseline — mono-channel audio input (ManiWAV-inspired).',
@@ -721,7 +747,7 @@
             </video>
           </div>
         </div>
-        <figcaption>Attends to the cable as it exits the conduit.</figcaption>
+        <figcaption>Vision-Only policy has diffused attention, especially in the presence of a visual distractor. RGBA-Attention policy can focus on the cable at its critical moment of exit.</figcaption>
       </figure>
 
       <figure class="attn-row">
@@ -739,7 +765,7 @@
             </video>
           </div>
         </div>
-        <figcaption>Attends to glare and speckle on transparent / glossy materials.</figcaption>
+        <figcaption>Vision-Only diffuses its attention across visual distractors (boxes) and fails to grasp the film, leading to misclassification of the film-grasping status. RGBA-Attention attends to smartphone body better, and attention map tracks the progress of remaining film.</figcaption>
       </figure>
 
       <figure class="attn-row">
@@ -757,7 +783,7 @@
             </video>
           </div>
         </div>
-        <figcaption>Ignores visual distractors irrelevant to the task.</figcaption>
+        <figcaption>Vision-Only attends to the distractor (yellow adhesive remover) and terminates early before the task ends. RGBA-Attention better attends to the remaining wiping area.</figcaption>
       </figure>
     </div>
   </div>
@@ -768,23 +794,79 @@
   <div class="container">
     <h2>Failure Modes</h2>
     <p class="lede">A few characteristic failures we observed:</p>
-    <div class="grid grid-2">
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/fail_cleaning.mp4" type="video/mp4" />
-        </video>
-        <figcaption>
-          <strong>Surface cleaning</strong> — no contact detected, or contact detected but the
-          policy cannot recover.
-        </figcaption>
+
+    <div class="fail-grid">
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/1.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 1</strong> — description here.</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/fail_boxcut.mp4" type="video/mp4" />
-        </video>
-        <figcaption>
-          <strong>Box cutting</strong> — a few millimeters of tape left uncut.
-        </figcaption>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/2.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 2</strong> — description here.</figcaption>
+      </figure>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/3.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 3</strong> — description here.</figcaption>
+      </figure>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/4.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 4</strong> — description here.</figcaption>
+      </figure>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/5.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 5</strong> — description here.</figcaption>
+      </figure>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/6.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 6</strong> — description here.</figcaption>
+      </figure>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/7.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 7</strong> — description here.</figcaption>
+      </figure>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/8.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 8</strong> — description here.</figcaption>
+      </figure>
+      <figure class="fail-tile">
+        <div class="fail-media">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/failures/9.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption><strong>Failure 9</strong> — description here.</figcaption>
       </figure>
     </div>
   </div>

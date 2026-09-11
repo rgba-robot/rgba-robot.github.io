@@ -303,11 +303,12 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 /* --- Autonomous-rollout badge: pure CSS on any tile inside a data-rollout section --- */
 [data-rollout="true"] .res-media,
 [data-rollout="true"] .attn-cell,
-[data-rollout="true"] .video-frame { position: relative; }
+[data-rollout="true"] .fail-media,
+[data-rollout="true"] .compare-viewport { position: relative; }
 
 [data-rollout="true"] .res-media::after,
 [data-rollout="true"] .attn-cell::after,
-[data-rollout="true"] .video-frame::after,
+[data-rollout="true"] .fail-media::after,
 [data-rollout="true"] .compare-viewport::after {
   content: "🤖 Autonomous Rollout";
   position: absolute;
@@ -326,15 +327,51 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   z-index: 3;
   white-space: nowrap;
 }
-/* Non-comparator .video-frame (Failure Modes) has a figcaption below the video, so put the
-   badge over the video's top-left instead of on top of the caption. */
-[data-rollout="true"] .video-frame:not(.compare)::after {
-  top: 8px;
-  bottom: auto;
+
+/* --- Failure Modes grid: max 2 per row, 9th tile centered on its own row --- */
+.fail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);   /* 4-col trick so each tile spans 2 */
+  gap: 20px;
 }
-/* Tasks section (.video-frame.compare) — the badge lives on the comparator viewport
-   (video area), not on the outer figure, so it stays clear of the caption. */
-[data-rollout="true"] .video-frame.compare::after { content: none; }
+.fail-tile {
+  grid-column: span 2;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+.fail-tile:nth-child(9) { grid-column: 2 / span 2; }   /* center the leftover */
+.fail-media {
+  aspect-ratio: 16 / 9;
+  background: #0b0c0f;
+  overflow: hidden;
+}
+.fail-media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #0b0c0f;
+}
+.fail-tile figcaption {
+  padding: 0.7rem 0.9rem;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .fail-grid { grid-template-columns: 1fr; }
+  .fail-tile { grid-column: auto; }
+  .fail-tile:nth-child(9) { grid-column: auto; }
+}
 
 /* --- Baselines & Results: task selector + 4-method grid --- */
 .res-tasks {
