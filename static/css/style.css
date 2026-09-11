@@ -652,7 +652,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   backdrop-filter: blur(4px);
   z-index: 1;
 }
-.attn-tag-accent { background: var(--accent); }
+.attn-tag-accent { background: #E0812A; }   /* matches RGBA-Attention color */
 .attn-row figcaption {
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
