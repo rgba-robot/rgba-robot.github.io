@@ -345,7 +345,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   display: flex;
   flex-direction: column;
 }
-.fail-tile:nth-child(7) { grid-column: 2 / span 2; }   /* center the leftover */
+/* No leftover tile at 6 items; add a `:nth-child(N) { grid-column: 2 / span 2; }` rule here if the count becomes odd */
 .fail-media {
   aspect-ratio: 16 / 9;
   background: #0b0c0f;
@@ -386,7 +386,6 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 @media (max-width: 720px) {
   .fail-grid { grid-template-columns: 1fr; }
   .fail-tile { grid-column: auto; }
-  .fail-tile:nth-child(7) { grid-column: auto; }
 }
 
 /* --- Baselines & Results: task selector + 4-method grid --- */
