@@ -377,6 +377,11 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   box-shadow: var(--shadow);
   aspect-ratio: 16 / 9;    /* holds shape even if video source is missing */
 }
+/* Our RGBA methods get a pink border to match the "pink pipeline" convention */
+.res-tile[data-method="rgba-attention"],
+.res-tile[data-method="rgba-history"] {
+  border: 2px solid #e0308c;
+}
 .res-tile video {
   display: block;
   width: 100%;
