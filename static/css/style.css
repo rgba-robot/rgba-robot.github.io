@@ -301,11 +301,11 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 }
 
 /* --- Autonomous-rollout badge: pure CSS on any tile inside a data-rollout section --- */
-[data-rollout="true"] .res-tile,
+[data-rollout="true"] .res-media,
 [data-rollout="true"] .attn-cell,
 [data-rollout="true"] .video-frame { position: relative; }
 
-[data-rollout="true"] .res-tile::after,
+[data-rollout="true"] .res-media::after,
 [data-rollout="true"] .attn-cell::after,
 [data-rollout="true"] .video-frame::after,
 [data-rollout="true"] .compare-viewport::after {
@@ -370,24 +370,41 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 .res-tile {
   position: relative;
   margin: 0;
-  background: #0b0c0f;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r);
   overflow: hidden;
   box-shadow: var(--shadow);
-  aspect-ratio: 16 / 9;    /* holds shape even if video source is missing */
+  display: flex;
+  flex-direction: column;
 }
 /* Our RGBA methods get a pink border to match the "pink pipeline" convention */
 .res-tile[data-method="rgba-attention"],
 .res-tile[data-method="rgba-history"] {
   border: 5px solid #e0308c;
 }
-.res-tile video {
+/* Media area: holds the 16:9 video and all corner overlays (tag, badge, audio) */
+.res-media {
+  position: relative;
+  background: #0b0c0f;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+.res-media video {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   background: #0b0c0f;
+}
+.res-caption {
+  padding: 0.7rem 0.9rem;
+  min-height: 3.4rem;                 /* keeps all four tiles aligned across the row */
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 .res-tag {
   position: absolute;

@@ -473,7 +473,7 @@
       if (parent.classList.contains('p-output')) return;           // representations are silent
 
       if (parent.classList.contains('attn-cell')) { attachAudioButton(video, parent); return; }
-      if (parent.classList.contains('res-tile'))  { attachAudioButton(video, parent); return; }
+      if (parent.classList.contains('res-media')) { attachAudioButton(video, parent); return; }
 
       // Any other video (teaser, setup, baselines, failures…): wrap it in a positioned shell.
       const shell = document.createElement('div');
@@ -551,28 +551,40 @@
 
     <div class="res-grid" data-task="threading">
       <figure class="res-tile" data-method="vision-only">
-        <span class="res-tag">Vision-Only</span>
-        <video autoplay muted playsinline preload="auto">
-          <source src="static/videos/results/threading/vision-only.mp4" type="video/mp4" />
-        </video>
+        <div class="res-media">
+          <span class="res-tag">Vision-Only</span>
+          <video autoplay muted playsinline preload="auto">
+            <source src="static/videos/results/threading/vision-only.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="res-caption"></div>
       </figure>
       <figure class="res-tile" data-method="maniwav">
-        <span class="res-tag">ManiWAV-inspired</span>
-        <video autoplay muted playsinline preload="auto">
-          <source src="static/videos/results/threading/maniwav.mp4" type="video/mp4" />
-        </video>
+        <div class="res-media">
+          <span class="res-tag">ManiWAV-inspired</span>
+          <video autoplay muted playsinline preload="auto">
+            <source src="static/videos/results/threading/maniwav.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="res-caption"></div>
       </figure>
       <figure class="res-tile" data-method="rgba-attention">
-        <span class="res-tag res-tag-accent">RGBA-Attention <em>(Ours)</em></span>
-        <video autoplay muted playsinline preload="auto">
-          <source src="static/videos/results/threading/rgba-attention.mp4" type="video/mp4" />
-        </video>
+        <div class="res-media">
+          <span class="res-tag res-tag-accent">RGBA-Attention <em>(Ours)</em></span>
+          <video autoplay muted playsinline preload="auto">
+            <source src="static/videos/results/threading/rgba-attention.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="res-caption"></div>
       </figure>
       <figure class="res-tile" data-method="rgba-history">
-        <span class="res-tag res-tag-accent">RGBA-History <em>(Ours)</em></span>
-        <video autoplay muted playsinline preload="auto">
-          <source src="static/videos/results/threading/rgba-history.mp4" type="video/mp4" />
-        </video>
+        <div class="res-media">
+          <span class="res-tag res-tag-accent">RGBA-History <em>(Ours)</em></span>
+          <video autoplay muted playsinline preload="auto">
+            <source src="static/videos/results/threading/rgba-history.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="res-caption"></div>
       </figure>
     </div>
 
@@ -600,6 +612,33 @@
     const grid   = section.querySelector('.res-grid');
     const tiles  = section.querySelectorAll('.res-tile');
     const videos = Array.from(tiles).map(t => t.querySelector('video'));
+
+    // Captions per (task, method). Missing keys fall back to CAPTIONS._defaults[method].
+    // Fill in task-specific blurbs below as they become available.
+    const CAPTIONS = {
+      threading: {},
+      grinding:  {},
+      peeling:   {},
+      cutting:   {},
+      cleaning:  {},
+      _defaults: {
+        'vision-only':    'Baseline — trained on RGB frames alone.',
+        'maniwav':        'Baseline — mono-channel audio input (ManiWAV-inspired).',
+        'rgba-attention': 'Ours — visual attention supervised by the acoustic map.',
+        'rgba-history':   'Ours — past acoustic evidence added to overhead patch tokens.',
+      },
+    };
+    function captionFor(task, method) {
+      return (CAPTIONS[task] && CAPTIONS[task][method])
+          || (CAPTIONS._defaults[method] || '');
+    }
+    function updateCaptions(task) {
+      tiles.forEach(tile => {
+        const cap = tile.querySelector('.res-caption');
+        if (cap) cap.textContent = captionFor(task, tile.dataset.method);
+      });
+    }
+    updateCaptions(grid.dataset.task);
 
     // Treat a video that can't play (404, bad codec) as "done" so it doesn't
     // block the group. isDone flips true on `ended` or `error`.
@@ -643,6 +682,7 @@
         const p = video.play();
         if (p && p.catch) p.catch(() => {});
       });
+      updateCaptions(task);
     }
 
     tabs.forEach(b => b.addEventListener('click', () => {
