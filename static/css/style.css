@@ -351,6 +351,22 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   background: #0b0c0f;
   overflow: hidden;
 }
+.fail-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: rgba(0,0,0,0.6);
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+.fail-tag-attention { background: #E0812A; }   /* RGBA-Attention orange */
+.fail-tag-history   { background: #3D77D2; }   /* RGBA-History  blue   */
 .fail-media video {
   display: block;
   width: 100%;
