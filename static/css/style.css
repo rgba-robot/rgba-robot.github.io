@@ -374,6 +374,7 @@ video.fit-contain { object-fit: contain !important; }
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.03em;
+  line-height: 1.4;              /* undo the parent's line-height: 0 */
   color: #fff;
   background: rgba(0,0,0,0.6);
   border-radius: 4px;
