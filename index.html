@@ -142,14 +142,50 @@
 <section class="section">
   <div class="container">
     <h2>Acoustic-Video Perception Input</h2>
-    <figure class="diagram">
-      <img src="static/images/beamforming.svg" alt="Illustration of acoustic beamforming producing an RGBA frame" />
-      <figcaption>
-        Time-delayed sums across microphones steer virtual "listening beams" through the scene. For
-        each pixel direction, we integrate acoustic energy, then overlay the resulting heatmap on
-        the RGB frame to produce an <strong>RGBA</strong> stream.
-      </figcaption>
-    </figure>
+    <p class="lede">
+      From an RGB frame + microphone array, we derive two acoustic-beamforming
+      representations: a <em>History</em> view (past contact evidence accumulated
+      up to now) and a <em>Future</em> view (max-pooled evidence going onward).
+    </p>
+
+    <div class="p-diagram">
+      <figure class="p-source">
+        <video autoplay muted loop playsinline>
+          <source src="static/videos/task_rgb_rgba/thread_cable/rgb.mp4" type="video/mp4" />
+        </video>
+        <figcaption>RGB input</figcaption>
+      </figure>
+
+      <svg class="p-arrows" viewBox="0 0 80 220" aria-hidden="true">
+        <defs>
+          <marker id="p-arrow" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerUnits="strokeWidth" markerWidth="5" markerHeight="5" orient="auto">
+            <path d="M0,0 L10,5 L0,10 Z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <path d="M0,110 C40,110 40,30 76,30"
+              fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+              marker-end="url(#p-arrow)"/>
+        <path d="M0,110 C40,110 40,190 76,190"
+              fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+              marker-end="url(#p-arrow)"/>
+      </svg>
+
+      <div class="p-outputs">
+        <figure class="p-output">
+          <span class="p-tag p-tag-accent">History Representation</span>
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_history.mp4" type="video/mp4" />
+          </video>
+        </figure>
+        <figure class="p-output">
+          <span class="p-tag">Future Representation</span>
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_future.mp4" type="video/mp4" />
+          </video>
+        </figure>
+      </div>
+    </div>
   </div>
 </section>
 
