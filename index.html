@@ -545,32 +545,32 @@
       <button type="button" role="tab" aria-selected="true"  class="active" data-task="threading">Task 1 · Threading cable</button>
       <button type="button" role="tab" aria-selected="false"                data-task="grinding">Task 2 · Plastic grinding</button>
       <button type="button" role="tab" aria-selected="false"                data-task="peeling">Task 3 · Film peeling</button>
-      <button type="button" role="tab" aria-selected="false"                data-task="opening">Task 4 · Sealed-box opening</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="cutting">Task 4 · Sealed-box opening</button>
       <button type="button" role="tab" aria-selected="false"                data-task="cleaning">Task 5 · Surface cleaning</button>
     </div>
 
     <div class="res-grid" data-task="threading">
       <figure class="res-tile" data-method="vision-only">
         <span class="res-tag">Vision-Only</span>
-        <video autoplay muted loop playsinline preload="auto">
+        <video autoplay muted playsinline preload="auto">
           <source src="static/videos/results/threading/vision-only.mp4" type="video/mp4" />
         </video>
       </figure>
       <figure class="res-tile" data-method="maniwav">
         <span class="res-tag">ManiWAV-inspired</span>
-        <video autoplay muted loop playsinline preload="auto">
+        <video autoplay muted playsinline preload="auto">
           <source src="static/videos/results/threading/maniwav.mp4" type="video/mp4" />
         </video>
       </figure>
       <figure class="res-tile" data-method="rgba-attention">
         <span class="res-tag res-tag-accent">RGBA-Attention <em>(Ours)</em></span>
-        <video autoplay muted loop playsinline preload="auto">
+        <video autoplay muted playsinline preload="auto">
           <source src="static/videos/results/threading/rgba-attention.mp4" type="video/mp4" />
         </video>
       </figure>
       <figure class="res-tile" data-method="rgba-history">
         <span class="res-tag res-tag-accent">RGBA-History <em>(Ours)</em></span>
-        <video autoplay muted loop playsinline preload="auto">
+        <video autoplay muted playsinline preload="auto">
           <source src="static/videos/results/threading/rgba-history.mp4" type="video/mp4" />
         </video>
       </figure>
@@ -590,16 +590,50 @@
 </section>
 
 <script>
-  // Baselines & Results: task selector swaps all 4 method videos in place.
+  // Baselines & Results: task selector swaps all 4 method videos in place,
+  // and once loaded, each video plays through, pauses on its last frame, and
+  // all four restart together when the LONGEST one finishes.
   (function () {
     const section = document.getElementById('results-section');
     if (!section) return;
-    const tabs  = section.querySelectorAll('.res-tasks button');
-    const grid  = section.querySelector('.res-grid');
-    const tiles = section.querySelectorAll('.res-tile');
+    const tabs   = section.querySelectorAll('.res-tasks button');
+    const grid   = section.querySelector('.res-grid');
+    const tiles  = section.querySelectorAll('.res-tile');
+    const videos = Array.from(tiles).map(t => t.querySelector('video'));
+
+    // Treat a video that can't play (404, bad codec) as "done" so it doesn't
+    // block the group. isDone flips true on `ended` or `error`.
+    videos.forEach(v => { v.dataset.done = 'false'; });
+
+    let restarting = false;
+    function maybeRestart() {
+      if (restarting) return;
+      if (!videos.every(v => v.dataset.done === 'true')) return;
+      restarting = true;
+      videos.forEach(v => { v.dataset.done = 'false'; });
+      videos.forEach(v => {
+        try { v.currentTime = 0; } catch (_) {}
+        const p = v.play();
+        if (p && p.catch) p.catch(() => {});
+      });
+      // Give the play() calls a tick to settle before another maybeRestart can fire.
+      setTimeout(() => { restarting = false; }, 100);
+    }
+    function markDone(v) { v.dataset.done = 'true'; maybeRestart(); }
+
+    videos.forEach(v => {
+      v.addEventListener('ended', () => markDone(v));
+      v.addEventListener('error', () => markDone(v));
+      // If the source resolves and the video is unplayable (0 duration), also mark done
+      v.addEventListener('loadedmetadata', () => {
+        if (!isFinite(v.duration) || v.duration === 0) markDone(v);
+      });
+    });
 
     function load(task) {
       grid.dataset.task = task;
+      restarting = false;
+      videos.forEach(v => { v.dataset.done = 'false'; });
       tiles.forEach(tile => {
         const method = tile.dataset.method;
         const video  = tile.querySelector('video');
