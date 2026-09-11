@@ -173,7 +173,7 @@
 
       <div class="p-outputs">
         <figure class="p-output">
-          <span class="p-tag p-tag-accent">History Representation</span>
+          <span class="p-tag">History Representation</span>
           <video autoplay muted loop playsinline>
             <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_history.mp4" type="video/mp4" />
           </video>
@@ -413,6 +413,9 @@
       // Skip the comparator's inner videos — the tile loop above already attached a button to cmp-a
       // and cmp-b's audio is never played (only its visuals).
       if (parent.classList.contains('compare-viewport')) return;
+
+      // Skip the perception-input representation videos (History / Future) — silent by design.
+      if (parent.classList.contains('p-output')) return;
 
       // .attn-cell is already position:relative — put the button directly inside it.
       if (parent.classList.contains('attn-cell')) {
