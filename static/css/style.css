@@ -339,6 +339,7 @@ video.fit-contain { object-fit: contain !important; }
   display: grid;
   grid-template-columns: repeat(4, 1fr);   /* 4-col trick so each tile spans 2 */
   gap: 20px;
+  align-items: start;                       /* tiles keep their own heights (mixed aspects) */
 }
 .fail-tile {
   grid-column: span 2;
@@ -353,9 +354,17 @@ video.fit-contain { object-fit: contain !important; }
 }
 /* No leftover tile at 6 items; add a `:nth-child(N) { grid-column: 2 / span 2; }` rule here if the count becomes odd */
 .fail-media {
-  aspect-ratio: 16 / 9;
   background: #0b0c0f;
   overflow: hidden;
+  min-height: 160px;              /* fallback so the badge/tag show before metadata loads */
+  line-height: 0;                 /* prevents a stray baseline gap under the video */
+}
+.fail-media video {
+  display: block;
+  width: 100%;
+  height: auto;                   /* size to the video's native aspect */
+  background: #0b0c0f;
+  object-fit: contain;            /* if a browser ignores intrinsic sizing, still no crop */
 }
 .fail-tag {
   position: absolute;
