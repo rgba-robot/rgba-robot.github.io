@@ -261,7 +261,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   pointer-events: none;
   backdrop-filter: blur(4px);
 }
-.cmp-label-l { left: 8px; background: #e0308c; }   /* RGBA side — our pink */
+.cmp-label-l { left: 8px; background: var(--accent); }   /* RGBA side — our pink */
 .cmp-label-r { right: 8px; }
 
 /* --- Universal audio button (auto-injected on every video) --- */
