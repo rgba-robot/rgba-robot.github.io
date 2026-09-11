@@ -357,6 +357,7 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   height: auto;
   max-width: 100%;
 }
+.arch-img[hidden] { display: none; }
 .arch-desc {
   padding: 1rem 1.25rem 1.25rem;
   border-top: 1px solid var(--line);
