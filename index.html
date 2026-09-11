@@ -529,6 +529,26 @@
       master.addEventListener('loadeddata', alignAll);
       followers.forEach(f => f.addEventListener('loadeddata', alignAll));
     });
+
+    // ==== Play-only-when-visible: pauses off-screen videos so mobile doesn't choke ====
+    // Especially important on iOS Safari which caps concurrent video decode.
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const v = entry.target;
+          if (entry.isIntersecting && entry.intersectionRatio > 0.25) {
+            // Coming into view — attempt to play. If it fails (autoplay policy), ignore silently.
+            const p = v.play();
+            if (p && p.catch) p.catch(() => {});
+          } else {
+            // Leaving view — pause to free the decoder for the videos actually on screen.
+            if (!v.paused) v.pause();
+          }
+        });
+      }, { threshold: [0, 0.25, 0.5] });
+
+      document.querySelectorAll('video').forEach(v => io.observe(v));
+    }
   })();
 </script>
 
