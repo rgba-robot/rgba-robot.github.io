@@ -298,6 +298,78 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   line-height: 0;         /* prevents baseline gap under the video */
 }
 
+/* --- RGBA Policy Training Framework: tabbed architecture viewer --- */
+.arch {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.arch-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 10px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-alt);
+}
+.arch-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+.arch-tabs button:hover { color: var(--ink); }
+.arch-tabs button.active {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--line);
+  margin-bottom: -1px;   /* overlap the container's bottom border */
+}
+.arch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.arch-dot-m1 { background: #c26a12; }   /* method 1 orange (matches figure) */
+.arch-dot-m2 { background: #2f6bb0; }   /* method 2 blue */
+
+.arch-figure {
+  padding: 0.75rem;
+  background: #fff;
+}
+.arch-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+.arch-desc {
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.arch-desc p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.arch-desc p strong { color: var(--ink); }
+
 /* --- Perception-input diagram: RGB → History / Future representations --- */
 .p-diagram {
   display: grid;
