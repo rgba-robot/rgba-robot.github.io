@@ -296,6 +296,8 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   position: relative;
   display: block;
   line-height: 0;         /* prevents baseline gap under the video */
+  min-height: 60px;       /* so the corner badge stays visible even if video src is missing */
+  background: #0b0c0f;
 }
 
 /* --- Autonomous-rollout badge (auto-injected on rollout videos, bottom-left) --- */
@@ -354,17 +356,17 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 .res-tile {
   position: relative;
   margin: 0;
-  background: var(--surface);
+  background: #0b0c0f;
   border: 1px solid var(--line);
   border-radius: var(--r);
   overflow: hidden;
   box-shadow: var(--shadow);
+  aspect-ratio: 16 / 9;    /* holds shape even if video source is missing */
 }
 .res-tile video {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
+  height: 100%;
   object-fit: cover;
   background: #0b0c0f;
 }
