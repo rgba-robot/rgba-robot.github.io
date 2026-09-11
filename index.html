@@ -793,14 +793,14 @@
 <section class="section alt" data-rollout="true">
   <div class="container">
     <h2>Failure Modes</h2>
-    <p class="lede">A few characteristic failures we observed:</p>
+    <p class="lede">Besides the failure modes we cover in Baselines & Results, we provide a few more characteristic failures we observed:</p>
 
     <div class="fail-grid">
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">Vision-Only</span>
           <video autoplay muted loop playsinline>
-            <source src="static/videos/failures/1.mp4" type="video/mp4" />
+            <source src="static/videos/failures/grinding_vision-only_demo_14_wrist_right.mp4" type="video/mp4" />
           </video>
         </div>
         <figcaption><strong>Failure 1</strong> — Policy grinds the wrong location of the plastic.</figcaption>
@@ -809,7 +809,7 @@
         <div class="fail-media">
           <span class="fail-tag fail-tag-attention">RGBA-Attention</span>
           <video autoplay muted loop playsinline>
-            <source src="static/videos/failures/2.mp4" type="video/mp4" />
+            <source src="static/videos/failures/grinding_attention_demo_10_wrist_left.mp4" type="video/mp4" />
           </video>
         </div>
         <figcaption><strong>Failure 2</strong> — No contact.</figcaption>
@@ -818,37 +818,37 @@
         <div class="fail-media">
           <span class="fail-tag fail-tag-attention">RGBA-Attention</span>
           <video autoplay muted loop playsinline>
-            <source src="static/videos/failures/3.mp4" type="video/mp4" />
+            <source src="static/videos/failures/cutting_attention_demo_5.mp4" type="video/mp4" />
           </video>
         </div>
-        <figcaption><strong>Failure 3</strong> — description here.</figcaption>
+        <figcaption><strong>Failure 3</strong> — Incomplete (sub-mm seal is uncut).</figcaption>
       </figure>
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">Vision-Only</span>
           <video autoplay muted loop playsinline>
-            <source src="static/videos/failures/4.mp4" type="video/mp4" />
+            <source src="static/videos/failures/cleaning_vision-only_demo_3.mp4" type="video/mp4" />
           </video>
         </div>
-        <figcaption><strong>Failure 4</strong> — description here.</figcaption>
+        <figcaption><strong>Failure 4</strong> — Incomplete (policy terminates early before the task was completed).</figcaption>
       </figure>
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">ManiWAV-inspired</span>
           <video autoplay muted loop playsinline>
-            <source src="static/videos/failures/5.mp4" type="video/mp4" />
+            <source src="static/videos/failures/cleaning_maniwav_demo_19.mp4" type="video/mp4" />
           </video>
         </div>
-        <figcaption><strong>Failure 5</strong> — description here.</figcaption>
+        <figcaption><strong>Failure 5</strong> — Policy fails grasping the sponge.</figcaption>
       </figure>
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag fail-tag-history">RGBA-History</span>
           <video autoplay muted loop playsinline>
-            <source src="static/videos/failures/6.mp4" type="video/mp4" />
+            <source src="static/videos/failures/cleaning_history_demo_7.mp4" type="video/mp4" />
           </video>
         </div>
-        <figcaption><strong>Failure 6</strong> — description here.</figcaption>
+        <figcaption><strong>Failure 6</strong> — No contact (Policy Detects its failure and retries, but cannot recover from the failure mode)</figcaption>
       </figure>
     </div>
   </div>
