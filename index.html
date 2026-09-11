@@ -40,7 +40,7 @@
       <li><a href="#">Anonymous Authors<sup>1</sup></a></li>
     </ul>
     <ul class="affiliations">
-      <li><sup>1</sup>Anonymous Institution</li>
+      <li><sup>1</sup>In Submission to ICRA 2027</li>
     </ul>
 
     <div class="links">
@@ -251,7 +251,7 @@
           action→image attention $q^{\theta}_{b,t}$ from the final block and add a KL-divergence
           loss $\lambda\,\mathcal{L}_{\text{attn}} = D_{\text{KL}}(p_{b,t}\,\|\,q^{\theta}_{b,t})$
           so the policy learns to <em>look where sound is happening</em>. Audio never enters the
-          forward pass — it only shapes the attention during training.
+          forward pass — it only shapes the attention during training, does not need audio processing at deployment.
         </p>
         <p data-desc="method2" hidden>
           <strong>Method 2 · RGBA History.</strong> The acoustic-video signal $A(x,y,t)$ is
@@ -259,7 +259,7 @@
           ($1\!\rightarrow\!384\!\rightarrow\!384$) lifts it into token space (blue). Those
           tokens are <em>element-wise added</em> to the overhead image patches before the
           transformer. Token count is unchanged (700 stays 700), no extra attention cost, and
-          audio is a first-class input at both train and test time.
+          audio is an input at both train and test time.
         </p>
       </div>
     </div>
@@ -540,26 +540,47 @@
 </script>
 
 <!-- ============ BASELINES ============ -->
-<section class="section alt">
+<section class="section alt" id="results-section">
   <div class="container">
     <h2>Baselines &amp; Results</h2>
-    <p>
-      We compare our two RGBA perception methods to two popular baselines:
-      <strong>Vision-Only</strong> and a policy that consumes <strong>mono-channel audio</strong>.
+    <p class="lede">
+      We compare our two RGBA methods against a <strong>Vision-Only</strong> baseline and a
+      <strong>ManiWAV-inspired</strong> baseline that consumes mono-channel audio. Pick a task
+      to load side-by-side rollouts of all four methods.
     </p>
 
-    <div class="grid grid-2 side-by-side">
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/baseline_vision.mp4" type="video/mp4" />
+    <div class="res-tasks" role="tablist" aria-label="Task">
+      <button type="button" role="tab" aria-selected="true"  class="active" data-task="thread_cable">Task 1 · Threading cable</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="grind_plastic">Task 2 · Plastic grinding</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="peel_film">Task 3 · Film peeling</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="cut_seal-box">Task 4 · Sealed-box opening</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="clean_surface">Task 5 · Surface cleaning</button>
+    </div>
+
+    <div class="res-grid" data-task="thread_cable">
+      <figure class="res-tile" data-method="vision">
+        <span class="res-tag">Vision-Only</span>
+        <video autoplay muted loop playsinline preload="auto">
+          <source src="static/videos/results/thread_cable/vision.mp4" type="video/mp4" />
         </video>
-        <figcaption>Vision-Only baseline</figcaption>
       </figure>
-      <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/ours_rgba.mp4" type="video/mp4" />
+      <figure class="res-tile" data-method="maniwav">
+        <span class="res-tag">ManiWAV-inspired</span>
+        <video autoplay muted loop playsinline preload="auto">
+          <source src="static/videos/results/thread_cable/maniwav.mp4" type="video/mp4" />
         </video>
-        <figcaption>Ours — RGBA</figcaption>
+      </figure>
+      <figure class="res-tile" data-method="attention">
+        <span class="res-tag res-tag-accent">RGBA-Attention <em>(Ours)</em></span>
+        <video autoplay muted loop playsinline preload="auto">
+          <source src="static/videos/results/thread_cable/attention.mp4" type="video/mp4" />
+        </video>
+      </figure>
+      <figure class="res-tile" data-method="history">
+        <span class="res-tag res-tag-accent">RGBA-History <em>(Ours)</em></span>
+        <video autoplay muted loop playsinline preload="auto">
+          <source src="static/videos/results/thread_cable/history.mp4" type="video/mp4" />
+        </video>
       </figure>
     </div>
 
@@ -575,6 +596,39 @@
     </div>
   </div>
 </section>
+
+<script>
+  // Baselines & Results: task selector swaps all 4 method videos in place.
+  (function () {
+    const section = document.getElementById('results-section');
+    if (!section) return;
+    const tabs  = section.querySelectorAll('.res-tasks button');
+    const grid  = section.querySelector('.res-grid');
+    const tiles = section.querySelectorAll('.res-tile');
+
+    function load(task) {
+      grid.dataset.task = task;
+      tiles.forEach(tile => {
+        const method = tile.dataset.method;
+        const video  = tile.querySelector('video');
+        const source = video.querySelector('source');
+        source.src = `static/videos/results/${task}/${method}.mp4`;
+        video.load();
+        const p = video.play();
+        if (p && p.catch) p.catch(() => {});
+      });
+    }
+
+    tabs.forEach(b => b.addEventListener('click', () => {
+      tabs.forEach(t => {
+        const on = t === b;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on);
+      });
+      load(b.dataset.task);
+    }));
+  })();
+</script>
 
 <!-- ============ ATTENTION ============ -->
 <section class="section">

@@ -298,6 +298,75 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
   line-height: 0;         /* prevents baseline gap under the video */
 }
 
+/* --- Baselines & Results: task selector + 4-method grid --- */
+.res-tasks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 1.25rem 0 1.5rem;
+}
+.res-tasks button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+.res-tasks button:hover { color: var(--ink); border-color: var(--ink-mute); }
+.res-tasks button.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.res-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.res-tile {
+  position: relative;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.res-tile video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #0b0c0f;
+}
+.res-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: rgba(0,0,0,0.6);
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+  z-index: 1;
+}
+.res-tag em { font-style: normal; opacity: 0.8; font-weight: 500; margin-left: 0.25rem; }
+.res-tag-accent { background: var(--accent); }
+
+@media (max-width: 720px) {
+  .res-grid { grid-template-columns: 1fr; }
+}
+
 /* --- RGBA Policy Training Framework: tabbed architecture viewer --- */
 .arch {
   background: var(--surface);
