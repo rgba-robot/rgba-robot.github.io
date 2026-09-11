@@ -542,36 +542,36 @@
     </p>
 
     <div class="res-tasks" role="tablist" aria-label="Task">
-      <button type="button" role="tab" aria-selected="true"  class="active" data-task="thread_cable">Task 1 · Threading cable</button>
-      <button type="button" role="tab" aria-selected="false"                data-task="grind_plastic">Task 2 · Plastic grinding</button>
-      <button type="button" role="tab" aria-selected="false"                data-task="peel_film">Task 3 · Film peeling</button>
-      <button type="button" role="tab" aria-selected="false"                data-task="cut_seal-box">Task 4 · Sealed-box opening</button>
-      <button type="button" role="tab" aria-selected="false"                data-task="clean_surface">Task 5 · Surface cleaning</button>
+      <button type="button" role="tab" aria-selected="true"  class="active" data-task="threading">Task 1 · Threading cable</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="grinding">Task 2 · Plastic grinding</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="peeling">Task 3 · Film peeling</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="opening">Task 4 · Sealed-box opening</button>
+      <button type="button" role="tab" aria-selected="false"                data-task="cleaning">Task 5 · Surface cleaning</button>
     </div>
 
-    <div class="res-grid" data-task="thread_cable">
-      <figure class="res-tile" data-method="vision">
+    <div class="res-grid" data-task="threading">
+      <figure class="res-tile" data-method="vision-only">
         <span class="res-tag">Vision-Only</span>
         <video autoplay muted loop playsinline preload="auto">
-          <source src="static/videos/results/thread_cable/rgb.mp4" type="video/mp4" />
+          <source src="static/videos/results/threading/vision-only.mp4" type="video/mp4" />
         </video>
       </figure>
       <figure class="res-tile" data-method="maniwav">
         <span class="res-tag">ManiWAV-inspired</span>
         <video autoplay muted loop playsinline preload="auto">
-          <source src="static/videos/results/thread_cable/maniwav.mp4" type="video/mp4" />
+          <source src="static/videos/results/threading/maniwav.mp4" type="video/mp4" />
         </video>
       </figure>
-      <figure class="res-tile" data-method="attention">
+      <figure class="res-tile" data-method="rgba-attention">
         <span class="res-tag res-tag-accent">RGBA-Attention <em>(Ours)</em></span>
         <video autoplay muted loop playsinline preload="auto">
-          <source src="static/videos/results/thread_cable/attention.mp4" type="video/mp4" />
+          <source src="static/videos/results/threading/rgba-attention.mp4" type="video/mp4" />
         </video>
       </figure>
-      <figure class="res-tile" data-method="history">
+      <figure class="res-tile" data-method="rgba-history">
         <span class="res-tag res-tag-accent">RGBA-History <em>(Ours)</em></span>
         <video autoplay muted loop playsinline preload="auto">
-          <source src="static/videos/results/thread_cable/history.mp4" type="video/mp4" />
+          <source src="static/videos/results/threading/rgba-history.mp4" type="video/mp4" />
         </video>
       </figure>
     </div>
