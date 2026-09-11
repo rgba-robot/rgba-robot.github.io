@@ -221,20 +221,20 @@
     <div class="arch">
       <div class="arch-tabs" role="tablist" aria-label="Method">
         <button type="button" role="tab" aria-selected="false" data-mode="shared">
-          Shared architecture
+          Vision-Only Backbone
         </button>
         <button type="button" role="tab" aria-selected="true"  data-mode="method1" class="active">
-          <span class="arch-dot arch-dot-m1"></span> Method 1 · Visuo-Acoustic Attention
+          <span class="arch-dot arch-dot-m1"></span> Method 1 · RGBA Attention
         </button>
         <button type="button" role="tab" aria-selected="false" data-mode="method2">
-          <span class="arch-dot arch-dot-m2"></span> Method 2 · Visuo-Acoustic History
+          <span class="arch-dot arch-dot-m2"></span> Method 2 · RGBA History
         </button>
       </div>
 
       <div class="arch-figure">
         <img class="arch-img arch-img-shared"  src="static/images/arch/shared.png"  alt="Shared architecture: DINOv2 backbone, token sequence, transformer, action head, and the pink acoustic-video pipeline." hidden />
-        <img class="arch-img arch-img-method1" src="static/images/arch/method1.png" alt="Method 1 (Visuo-Acoustic Attention): the pooled acoustic map becomes a target attention region p_{b,t}, matched via KL divergence against the transformer's action→image attention q^θ." />
-        <img class="arch-img arch-img-method2" src="static/images/arch/method2.png" alt="Method 2 (Visuo-Acoustic History): a per-patch MLP maps the pooled acoustic map to 384-D tokens that are element-wise added to the overhead image patches before the transformer." hidden />
+        <img class="arch-img arch-img-method1" src="static/images/arch/method1.png" alt="Method 1 (RGBA Attention): the pooled acoustic map becomes a target attention region p_{b,t}, matched via KL divergence against the transformer's action→image attention q^θ." />
+        <img class="arch-img arch-img-method2" src="static/images/arch/method2.png" alt="Method 2 (RGBA History): a per-patch MLP maps the pooled acoustic map to 384-D tokens that are element-wise added to the overhead image patches before the transformer." hidden />
       </div>
 
       <div class="arch-desc">
@@ -247,7 +247,7 @@
           that either method consumes.
         </p>
         <p data-desc="method1">
-          <strong>Method 1 · Visuo-Acoustic Attention.</strong> The pooled acoustic map becomes
+          <strong>Method 1 · RGBA Attention.</strong> The pooled acoustic map becomes
           a <em>target attention region</em> $p_{b,t}$. We read the transformer's
           action→image attention $q^{\theta}_{b,t}$ from the final block and add a KL-divergence
           loss $\lambda\,\mathcal{L}_{\text{attn}} = D_{\text{KL}}(p_{b,t}\,\|\,q^{\theta}_{b,t})$
@@ -255,7 +255,7 @@
           forward pass — it only shapes the attention during training.
         </p>
         <p data-desc="method2" hidden>
-          <strong>Method 2 · Visuo-Acoustic History.</strong> A per-patch MLP
+          <strong>Method 2 · RGBA History.</strong> A per-patch MLP
           ($1\!\rightarrow\!384\!\rightarrow\!384$) lifts the pooled acoustic map into token
           space, then <em>element-wise adds</em> it to the overhead image patches before the
           transformer. Token count is unchanged (700 stays 700), no extra attention cost, and
