@@ -155,19 +155,23 @@
 <section class="section">
   <div class="container">
     <h2>Acoustic-Video Perception Input</h2>
-    <p class="lede">
-      From an RGB frame + microphone array, we derive two acoustic-beamforming
-      representations: a <em>History</em> view (past contact evidence accumulated
-      up to now) and a <em>Future</em> view (max-pooled evidence going onward).
-    </p>
 
     <div class="p-diagram">
-      <figure class="p-source">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/task_rgb_rgba/thread_cable/rgb.mp4" type="video/mp4" />
-        </video>
-        <figcaption>RGB input</figcaption>
-      </figure>
+      <div class="p-left">
+        <p class="p-desc">
+          From an RGB frame + microphone array, we derive two acoustic-beamforming
+          representations: a <em>History</em> view (past contact evidence accumulated
+          up to now) and a <em>Future</em> view (max-pooled evidence going onward),
+          where $t$ is the elapsed time and $T$ is the maximum teleoperated
+          demonstration length.
+        </p>
+        <figure class="p-source">
+          <video autoplay muted loop playsinline>
+            <source src="static/videos/task_rgb_rgba/thread_cable/rgb.mp4" type="video/mp4" />
+          </video>
+          <figcaption>RGB input</figcaption>
+        </figure>
+      </div>
 
       <svg class="p-arrows" viewBox="0 0 80 220" aria-hidden="true">
         <defs>
@@ -201,10 +205,6 @@
         </figure>
       </div>
     </div>
-    <p class="p-where">
-      where $t$ is the elapsed time and $T$ is the maximum teleoperated
-      demonstration length.
-    </p>
   </div>
 </section>
 

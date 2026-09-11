@@ -373,22 +373,27 @@ p  { color: var(--ink-soft); margin: 0 0 1rem; }
 .p-tag-accent { background: var(--accent); }
 
 .p-formula {
-  padding: 0.6rem 0.9rem;
+  padding: 0.3rem 0.75rem;
   border-top: 1px solid var(--line);
   background: var(--bg-alt);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--ink);
   overflow-x: auto;
   text-align: center;
 }
-.p-formula .katex { font-size: 1em; }
+.p-formula .katex { font-size: 0.95em; }
 
-.p-where {
-  margin: 1.25rem auto 0;
-  max-width: 780px;
-  text-align: center;
-  font-size: 0.9rem;
+.p-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: stretch;
+}
+.p-desc {
+  margin: 0;
+  font-size: 0.92rem;
   color: var(--ink-soft);
+  line-height: 1.55;
 }
 
 @media (max-width: 780px) {
