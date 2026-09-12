@@ -73,7 +73,7 @@
   <div class="container narrow">
     <h2>Abstract</h2>
     <p>
-      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates <em>vibroacoustic</em> sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an <strong>Acoustic Video</strong> (<em>AV</em>) stream. We present two approaches to using AV: <strong>1) AV-Attention</strong> and <strong>2) AV-History</strong>. Across five contact-rich manipulation tasks, experiments suggest that AV improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
+      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates <em>vibroacoustic</em> sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an <strong>Acoustic Video</strong> (AV) stream. We present two approaches to using AV: <strong>1) AV-Attention</strong> and <strong>2) AV-History</strong>. We build both AV approaches on the encoder-only Action Chunking Transformer for an efficient manipulation policy trained by imitation. Across five contact-rich manipulation tasks, experiments suggest that AV improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
     </p>
   </div>
 </section>
@@ -158,7 +158,7 @@
           From an RGB frame + microphone array, we derive two acoustic-beamforming
           representations: a <em>History</em> representation (past acoustics accumulated
           up to now) and a <em>Future</em> representation (future acoustics going onward),
-          where $t$ is the elapsed time and $T$ is the maximum teleoperated
+          where $T$ is the elapsed time and $T_{final}$ is the maximum teleoperated
           demonstration length.
         </p>
         <figure class="p-source">
@@ -190,14 +190,14 @@
           <video autoplay muted loop playsinline>
             <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_history.mp4" type="video/mp4" />
           </video>
-          <div class="p-formula">$$H(x,y,t) = \max_{0 \le \tau \le t} A(x,y,\tau)$$</div>
+          <div class="p-formula">$$H(x,y,T) = \max_{0 \le t \le T} A(x,y,t)$$</div>
         </figure>
         <figure class="p-output">
           <span class="p-tag">Future Representation</span>
           <video autoplay muted loop playsinline>
             <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_future.mp4" type="video/mp4" />
           </video>
-          <div class="p-formula">$$F(x,y,t) = \max_{t \le \tau \le T} A(x,y,\tau)$$</div>
+          <div class="p-formula">$$F(x,y,T) = \max_{T \le t \le T_{final}} A(x,y,t)$$</div>
         </figure>
       </div>
     </div>
