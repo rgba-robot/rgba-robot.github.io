@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>RGBA Robot Perception</title>
+<title>Acoustic Video Robot Perception</title>
 <meta name="description" content="Using Acoustic-Video Perception for Robot Manipulation with Occluded Contact Dynamics." />
 <link rel="stylesheet" href="static/css/style.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,7 +29,7 @@
 <header class="hero">
   <div class="container">
     <h1 class="title">
-      <span class="rgb">RGB<span class="a">A</span> Robot Perception
+      <span class="a">Acoustic Video</span> Robot Perception
     </h1>
     <p class="subtitle">
       Using Acoustic-Video Perception for Robot Manipulation<br />
@@ -62,7 +62,7 @@
       </video> -->
       <p>**main video comes here (placeholder for now)**</p>
       <figcaption>
-        We present <strong>RGBA robot perception</strong> — using acoustic-video as a robot perception to improve manipulation performance under occluded contact dynamics.
+        We present <strong>Acoustic Video (AV) robot perception</strong> — using AV as a robot perception to improve manipulation performance under occluded contact dynamics.
       </figcaption>
     </figure>
   </div>
@@ -73,7 +73,7 @@
   <div class="container narrow">
     <h2>Abstract</h2>
     <p>
-      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates <em>vibroacoustic</em> sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an <em>RGBA</em> video stream (<em>A</em> for Acoustic). We present two approaches to using RGBA video: <strong>1) RGBA-Attention</strong> and <strong>2) RGBA-History</strong>. Across five contact-rich manipulation tasks, experiments suggest that acoustic video improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
+      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates <em>vibroacoustic</em> sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an <strong>Acoustic Video</strong> (<em>AV</em>) stream. We present two approaches to using AV: <strong>1) AV-Attention</strong> and <strong>2) AV-History</strong>. Across five contact-rich manipulation tasks, experiments suggest that AV improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
     </p>
   </div>
 </section>
@@ -128,7 +128,7 @@
 <!-- ============ SETUP ============ -->
 <section class="section alt">
   <div class="container">
-    <h2>RGBA Perception System</h2>
+    <h2>AV Perception System</h2>
     <div class="grid grid-2">
       <figure class="video-frame">
         <video autoplay muted loop playsinline controls>
@@ -207,7 +207,7 @@
 <!-- ============ METHODS ============ -->
 <section class="section alt" id="arch-section">
   <div class="container">
-    <h2>RGBA Policy Training Framework</h2>
+    <h2>AV Policy Training Framework</h2>
     <p class="lede">
       Both methods share the same trunk (gray). Click a tab to see how each method
       turns the acoustic-video stream into a training signal or an extra input.
@@ -219,17 +219,17 @@
           Vision-Only Backbone
         </button>
         <button type="button" role="tab" aria-selected="true"  data-mode="method1" class="active">
-          <span class="arch-dot arch-dot-m1"></span> Method 1 · RGBA Attention
+          <span class="arch-dot arch-dot-m1"></span> Method 1 · AV-Attention
         </button>
         <button type="button" role="tab" aria-selected="false" data-mode="method2">
-          <span class="arch-dot arch-dot-m2"></span> Method 2 · RGBA History
+          <span class="arch-dot arch-dot-m2"></span> Method 2 · AV-History
         </button>
       </div>
 
       <div class="arch-figure">
         <img class="arch-img arch-img-shared"  src="static/images/arch/shared.png"  alt="Shared architecture: DINOv2 backbone, token sequence, transformer, and action head." hidden />
-        <img class="arch-img arch-img-method1" src="static/images/arch/method1.png" alt="Method 1 (RGBA Attention): the pooled acoustic map becomes a target attention region p_{b,t}, matched via KL divergence against the transformer's action→image attention q^θ." />
-        <img class="arch-img arch-img-method2" src="static/images/arch/method2.png" alt="Method 2 (RGBA History): a per-patch MLP maps the pooled acoustic map to 384-D tokens that are element-wise added to the overhead image patches before the transformer." hidden />
+        <img class="arch-img arch-img-method1" src="static/images/arch/method1.png" alt="Method 1 (AV-Attention): the pooled acoustic map becomes a target attention region p_{b,t}, matched via KL divergence against the transformer's action→image attention q^θ." />
+        <img class="arch-img arch-img-method2" src="static/images/arch/method2.png" alt="Method 2 (AV-History): a per-patch MLP maps the pooled acoustic map to 384-D tokens that are element-wise added to the overhead image patches before the transformer." hidden />
       </div>
 
       <div class="arch-desc">
@@ -240,7 +240,7 @@
           behavior-cloning loss $\mathcal{L}_{\text{BC}}$.
         </p>
         <p data-desc="method1">
-          <strong>Method 1 · RGBA Attention.</strong> The acoustic-video signal $A(x,y,t)$ is
+          <strong>Method 1 · AV-Attention.</strong> The acoustic-video signal $A(x,y,t)$ is
           resized and patch-pooled into a $20\times 35$ grid (pink), then used as a
           <em>target attention region</em> $p_{b,t}$ (orange). We read the transformer's
           action→image attention $q^{\theta}_{b,t}$ from the final block and add a KL-divergence
@@ -249,7 +249,7 @@
           forward pass — it only shapes the attention during training, does not need audio processing at deployment.
         </p>
         <p data-desc="method2" hidden>
-          <strong>Method 2 · RGBA History.</strong> The acoustic-video signal $A(x,y,t)$ is
+          <strong>Method 2 · AV-History.</strong> The acoustic-video signal $A(x,y,t)$ is
           resized and patch-pooled into a $20\times 35$ grid (pink), then a per-patch MLP
           ($1\!\rightarrow\!384\!\rightarrow\!384$) lifts it into token space (blue). Those
           tokens are <em>element-wise added</em> to the overhead image patches before the
@@ -289,7 +289,7 @@
     <p class="lede">
       We evaluate on five representative manipulation tasks that passively and naturally make sound
       during manipulation. Drag the slider on each tile to compare <strong>RGB</strong> vs.
-      <strong>RGBA</strong>.
+      <strong>AV</strong>.
     </p>
 
     <div class="grid grid-5 tasks">
@@ -362,7 +362,7 @@
 
     // On narrow/mobile viewports, iOS Safari can't reliably decode both cmp-a and cmp-b
     // simultaneously (and dragging a hair-line slider with a finger is fiddly anyway).
-    // Swap the split-slider for a single-video RGBA/RGB toggle button on mobile.
+    // Swap the split-slider for a single-video AV/RGB toggle button on mobile.
     const IS_MOBILE = window.matchMedia('(max-width: 720px)').matches;
 
     const tiles = document.querySelectorAll('.video-frame.compare');
@@ -384,7 +384,7 @@
           <video class="cmp-mobile cmp-mobile-rgb"  autoplay muted loop playsinline preload="auto">
             <source src="${base}/rgb.mp4"  type="video/mp4">
           </video>
-          <span class="cmp-label cmp-label-l">RGBA</span>
+          <span class="cmp-label cmp-label-l">AV</span>
           <button type="button" class="cmp-mobile-toggle" aria-pressed="true">Show RGB</button>
         `;
         tile.insertBefore(viewport, caption);
@@ -410,9 +410,9 @@
           e.stopPropagation();
           showingRGBA = !showingRGBA;
           viewport.dataset.mode  = showingRGBA ? 'rgba' : 'rgb';
-          label.textContent      = showingRGBA ? 'RGBA' : 'RGB';
+          label.textContent      = showingRGBA ? 'AV' : 'RGB';
           label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
-          toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show RGBA';
+          toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show AV';
           toggle.setAttribute('aria-pressed', showingRGBA);
         });
 
@@ -426,10 +426,10 @@
       viewport.innerHTML = `
         <video class="cmp-a" autoplay muted loop playsinline preload="auto"><source src="${base}/rgb.mp4"  type="video/mp4"></video>
         <video class="cmp-b" autoplay muted loop playsinline preload="auto"><source src="${base}/rgbs.mp4" type="video/mp4"></video>
-        <span class="cmp-label cmp-label-l">RGBA</span>
+        <span class="cmp-label cmp-label-l">AV</span>
         <span class="cmp-label cmp-label-r">RGB</span>
         <div class="cmp-handle" role="slider" tabindex="0"
-             aria-label="Reveal RGB vs RGBA" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+             aria-label="Reveal RGB vs AV" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
           <div class="cmp-line"></div>
           <div class="cmp-knob" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
@@ -638,7 +638,7 @@
   <div class="container">
     <h2>Baselines &amp; Results</h2>
     <p class="lede">
-      We compare our two RGBA methods against a <strong>Vision-Only</strong> baseline and a
+      We compare our two AV methods against a <strong>Vision-Only</strong> baseline and a
       <strong>ManiWAV-inspired</strong> baseline that consumes mono-channel audio. Pick a task
       to load side-by-side rollouts of all four methods.
     </p>
@@ -672,7 +672,7 @@
       </figure>
       <figure class="res-tile" data-method="rgba-attention">
         <div class="res-media">
-          <span class="res-tag res-tag-accent">RGBA-Attention <em>(Ours)</em></span>
+          <span class="res-tag res-tag-accent">AV-Attention <em>(Ours)</em></span>
           <video autoplay muted playsinline preload="auto">
             <source src="static/videos/results/threading/rgba-attention.mp4" type="video/mp4" />
           </video>
@@ -681,7 +681,7 @@
       </figure>
       <figure class="res-tile" data-method="rgba-history">
         <div class="res-media">
-          <span class="res-tag res-tag-accent">RGBA-History <em>(Ours)</em></span>
+          <span class="res-tag res-tag-accent">AV-History <em>(Ours)</em></span>
           <video autoplay muted playsinline preload="auto">
             <source src="static/videos/results/threading/rgba-history.mp4" type="video/mp4" />
           </video>
@@ -828,8 +828,8 @@
   <div class="container">
     <h2>Qualitative Analysis - <em>What the Policy Attends To</em></h2>
     <p class="lede">
-      The RGBA-Attention method guides the policy toward critical, task-relevant visual features.
-      Each row compares <strong>Vision-Only</strong> (left) with <strong>RGBA-Attention</strong> (right).
+      The AV-Attention method guides the policy toward critical, task-relevant visual features.
+      Each row compares <strong>Vision-Only</strong> (left) with <strong>AV-Attention</strong> (right).
     </p>
 
     <div class="attn-list">
@@ -842,13 +842,13 @@
             </video>
           </div>
           <div class="attn-cell">
-            <span class="attn-tag attn-tag-accent">RGBA-Attention</span>
+            <span class="attn-tag attn-tag-accent">AV-Attention</span>
             <video autoplay muted loop playsinline>
               <source src="static/videos/attn/threading/rgba.mp4" type="video/mp4" />
             </video>
           </div>
         </div>
-        <figcaption>Vision-Only policy has diffused attention, especially in the presence of a visual distractor. RGBA-Attention policy can focus on the cable at its critical moment of exit.</figcaption>
+        <figcaption>Vision-Only policy has diffused attention, especially in the presence of a visual distractor. AV-Attention policy can focus on the cable at its critical moment of exit.</figcaption>
       </figure>
 
       <figure class="attn-row">
@@ -860,13 +860,13 @@
             </video>
           </div>
           <div class="attn-cell">
-            <span class="attn-tag attn-tag-accent">RGBA-Attention</span>
+            <span class="attn-tag attn-tag-accent">AV-Attention</span>
             <video autoplay muted loop playsinline>
               <source src="static/videos/attn/peeling/rgba.mp4" type="video/mp4" />
             </video>
           </div>
         </div>
-        <figcaption>Vision-Only diffuses its attention across visual distractors (boxes) and fails to grasp the film, leading to misclassification of the film-grasping status. RGBA-Attention attends to smartphone body better, and attention map tracks the progress of remaining film.</figcaption>
+        <figcaption>Vision-Only diffuses its attention across visual distractors (boxes) and fails to grasp the film, leading to misclassification of the film-grasping status. AV-Attention attends to smartphone body better, and attention map tracks the progress of remaining film.</figcaption>
       </figure>
 
       <figure class="attn-row">
@@ -878,13 +878,13 @@
             </video>
           </div>
           <div class="attn-cell">
-            <span class="attn-tag attn-tag-accent">RGBA-Attention</span>
+            <span class="attn-tag attn-tag-accent">AV-Attention</span>
             <video autoplay muted loop playsinline>
               <source src="static/videos/attn/cleaning/rgba.mp4" type="video/mp4" />
             </video>
           </div>
         </div>
-        <figcaption>Vision-Only attends to the distractor (yellow adhesive remover) and terminates early before the task ends. RGBA-Attention better attends to the remaining wiping area.</figcaption>
+        <figcaption>Vision-Only attends to the distractor (yellow adhesive remover) and terminates early before the task ends. AV-Attention better attends to the remaining wiping area.</figcaption>
       </figure>
     </div>
   </div>
@@ -908,7 +908,7 @@
       </figure>
       <figure class="fail-tile">
         <div class="fail-media">
-          <span class="fail-tag fail-tag-attention">RGBA-Attention</span>
+          <span class="fail-tag fail-tag-attention">AV-Attention</span>
           <video autoplay muted loop playsinline>
             <source src="static/videos/failures/grinding_attention_demo_10_wrist_left.mp4" type="video/mp4" />
           </video>
@@ -917,7 +917,7 @@
       </figure>
       <figure class="fail-tile">
         <div class="fail-media">
-          <span class="fail-tag fail-tag-attention">RGBA-Attention</span>
+          <span class="fail-tag fail-tag-attention">AV-Attention</span>
           <video autoplay muted loop playsinline>
             <source src="static/videos/failures/cutting_attention_demo_5.mp4" type="video/mp4" />
           </video>
@@ -944,7 +944,7 @@
       </figure>
       <figure class="fail-tile">
         <div class="fail-media">
-          <span class="fail-tag fail-tag-history">RGBA-History</span>
+          <span class="fail-tag fail-tag-history">AV-History</span>
           <video autoplay muted loop playsinline>
             <source src="static/videos/failures/cleaning_history_demo_7.mp4" type="video/mp4" />
           </video>
@@ -974,7 +974,7 @@
   <div class="container narrow">
     <h2>BibTeX</h2>
     <pre class="bibtex"><code>@inproceedings{rgba2026,
-  title     = {RGBA Robot Perception: Using Acoustic-Video Perception for Robot
+  title     = {Acoustic Video Robot Perception: Using Acoustic-Video Perception for Robot
                Manipulation with Occluded Contact Dynamics},
   author    = {Author, One and Author, Two and Author, Three},
   booktitle = {TBD},
