@@ -131,8 +131,8 @@
     <h2>RGBA Perception System</h2>
     <div class="grid grid-2">
       <figure class="video-frame">
-        <video autoplay muted loop playsinline>
-          <source src="static/videos/setup.mp4" type="video/mp4" />
+        <video autoplay muted loop playsinline controls>
+          <source src="static/videos/beamforming_explain.mp4" type="video/mp4" />
         </video>
         <figcaption>We replace conventional overhead camera into an acoustic camera.</figcaption>
       </figure>
@@ -525,6 +525,7 @@
     document.querySelectorAll('video').forEach(video => {
       const parent = video.parentElement;
       if (!parent) return;
+      if (video.hasAttribute('controls')) return;                  // native <video controls> owns its bottom UI
       if (parent.classList.contains('compare-viewport')) return;   // comparator handled above
       if (parent.classList.contains('p-output')) return;           // representations are silent
 
@@ -898,7 +899,7 @@
 <section class="section alt" data-rollout="true">
   <div class="container">
     <h2>Failure Modes</h2>
-    <p class="lede">Besides the failure modes we cover in Baselines & Results, we provide a few more characteristic failures we observed:</p>
+    <p class="lede">Besides the failure modes we cover above, we provide a few more characteristic failures observed:</p>
 
     <div class="fail-grid">
       <figure class="fail-tile">
