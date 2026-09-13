@@ -637,6 +637,39 @@
       }, { threshold: [0, 0.25, 0.5] });
 
       document.querySelectorAll('video').forEach(v => io.observe(v));
+
+      // ==== iOS resilience: (a) retry play when a video finally becomes playable,
+      // and (b) resume everything on screen-wake / tab-resume / bfcache restore. ====
+      function isCurrentlyVisible(v) {
+        if (getComputedStyle(v).visibility === 'hidden') return false;
+        const r = v.getBoundingClientRect();
+        const h = window.innerHeight || document.documentElement.clientHeight;
+        return r.bottom > 0 && r.top < h;
+      }
+      function shouldPlay(v) {
+        // Grouped video plays if ANY member of its group is visible; else per-video.
+        const g = videoGroup.get(v);
+        if (g) return [...groupMembers.get(g)].some(isCurrentlyVisible);
+        return isCurrentlyVisible(v);
+      }
+      function tryPlay(v) {
+        if (!shouldPlay(v) || !v.paused) return;
+        const p = v.play(); if (p && p.catch) p.catch(() => {});
+      }
+      // (a) retry on canplay / loadedmetadata (fires when the browser is finally ready)
+      document.querySelectorAll('video').forEach(v => {
+        v.addEventListener('canplay',        () => tryPlay(v));
+        v.addEventListener('loadedmetadata', () => tryPlay(v));
+      });
+      // (b) resume everything that should be playing when the phone wakes / tab resumes
+      function resumeAll() {
+        document.querySelectorAll('video').forEach(tryPlay);
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') resumeAll();
+      });
+      window.addEventListener('pageshow', resumeAll);   // bfcache restore
+      window.addEventListener('focus',    resumeAll);   // switching back to Safari
     }
   })();
 </script>
