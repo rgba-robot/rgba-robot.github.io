@@ -466,6 +466,7 @@ video.fit-contain { object-fit: contain !important; }
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+  align-items: start;                  /* tiles keep own heights when videos are mixed aspects */
 }
 .res-tile {
   position: relative;
@@ -484,18 +485,20 @@ video.fit-contain { object-fit: contain !important; }
 /* Per-method tag color overrides the shared accent */
 .res-tile[data-method="rgba-attention"] .res-tag-accent { background: #E0812A; }
 .res-tile[data-method="rgba-history"]   .res-tag-accent { background: #3D77D2; }
-/* Media area: holds the 16:9 video and all corner overlays (tag, badge, audio) */
+/* Media area: sizes to the video's native aspect (no crop, no letterbox).
+   min-height keeps the tag/badge visible before metadata loads. */
 .res-media {
   position: relative;
   background: #0b0c0f;
-  aspect-ratio: 16 / 9;
   overflow: hidden;
+  min-height: 160px;
+  line-height: 0;
 }
 .res-media video {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;                       /* let the video's native aspect determine height */
+  object-fit: contain;                /* safety net for browsers that ignore intrinsic sizing */
   background: #0b0c0f;
 }
 .res-caption {
@@ -515,6 +518,7 @@ video.fit-contain { object-fit: contain !important; }
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.03em;
+  line-height: 1.4;                   /* undo parent's line-height: 0 */
   color: #fff;
   background: rgba(0,0,0,0.6);
   border-radius: 4px;
