@@ -81,7 +81,7 @@
   <div class="container narrow">
     <h2>Abstract</h2>
     <p>
-      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates <em>vibroacoustic</em> sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an <strong>Acoustic Video</strong> (AV) stream. We present two approaches to using AV: <strong>1) AV-Attention</strong> and <strong>2) AV-History</strong>. We build both AV approaches on the encoder-only Action Chunking Transformer for an efficient manipulation policy trained by imitation. Across five contact-rich manipulation tasks, experiments suggest that AV improves task success rate by 20.5% and progress by 17.5% on average compared to Vision-Only and mono-channel audio approach baselines.
+      Almost all manipulation tasks involve <strong>occluded contact dynamics</strong>: it is inherently difficult to visually observe detailed surface contacts as they are created and changed. Consider grasping, assembly, peeling, or pushing - even a planar task like "Push T" hides the contact between object and surface. Such contact, however, generates <em>vibroacoustic</em> sound through friction and provides useful contact information. In this paper, we explore how a low-cost <strong>acoustic camera</strong> can perceive occluded contact dynamics to enhance robot manipulation. We use microphone array beamforming to localize audio over time in a 2D RGB camera image plane. When overlaid on video, we call this an <strong>Acoustic Video</strong> (AV) stream. We present two approaches to using AV: <strong>1) AV-Attention</strong> and <strong>2) AV-History</strong>. We build both AV approaches on the encoder-only Action Chunking Transformer for an efficient manipulation policy trained by imitation. Across five contact-rich manipulation tasks, experiments suggest that AV improves task success rate by 21.0% and progress by 16.1% on average compared to Vision-Only and mono-channel audio approach baselines.
     </p>
   </div>
 </section>
@@ -163,7 +163,7 @@
     <div class="p-diagram">
       <div class="p-left">
         <p class="p-desc">
-          From an RGB frame + microphone array, we derive two acoustic-beamforming
+          From an RGB frame + microphone array, we localize audio on image plane ($A(x,y,t)$) and derive two temporally accumulated
           representations: a <em>History</em> representation (past acoustics accumulated
           up to now) and a <em>Future</em> representation (future acoustics going onward),
           where $T$ is the elapsed time and $T_{final}$ is the maximum teleoperated
@@ -751,11 +751,11 @@
 
     <div class="stat-row">
       <div class="stat">
-        <div class="stat-num">+20.5%</div>
+        <div class="stat-num">+21.0%</div>
         <div class="stat-label">Task success rate<br /><span>vs. baselines, averaged across tasks</span></div>
       </div>
       <div class="stat">
-        <div class="stat-num">+17.5%</div>
+        <div class="stat-num">+16.1%</div>
         <div class="stat-label">Task progress<br /><span>vs. baselines, averaged across tasks</span></div>
       </div>
     </div>
@@ -784,10 +784,10 @@
         'rgba-history':   'Success under a visual distractor (blue box bottom right).',
       },
       grinding:  {
-        'vision-only':    'TODO',
-        'maniwav':        'TODO',
-        'rgba-attention': 'TODO',
-        'rgba-history':   'TODO',
+        'vision-only':    'No contact.',
+        'maniwav':        'Grinding a wrong location.',
+        'rgba-attention': 'Grinding the right location.',
+        'rgba-history':   'Making contact and noticeable grinding state change.',
       },
       peeling:   {
         'vision-only':    'Policy often grasp the phone body together with the film.',
@@ -797,7 +797,7 @@
       },
       cutting:   {
         'vision-only':    'Policy fails precise insertion of blade + not enough pressure',
-        'maniwav':        'TODO',
+        'maniwav':        'Policy fails precise insertion of blade + not enough pressure',
         'rgba-attention': 'Successful insertion and cutting.',
         'rgba-history':   'Successful insertion and cutting.',
       },
@@ -879,6 +879,31 @@
       });
       load(b.dataset.task);
     }));
+
+    // ==== Hard-sync all 4 method videos to a shared clock ====
+    // The longest video is the master. Every 500 ms, snap each other video's
+    // currentTime to the master's (as long as the master hasn't passed the
+    // follower's own duration — shorter videos stay paused on their last frame
+    // and only restart together via the maybeRestart() logic above).
+    setInterval(() => {
+      // pick the longest ready video as master
+      let master = null;
+      for (const v of videos) {
+        if (v.readyState < 2 || !isFinite(v.duration)) continue;
+        if (!master || v.duration > master.duration) master = v;
+      }
+      if (!master || master.paused) return;
+      const t = master.currentTime;
+      videos.forEach(v => {
+        if (v === master) return;
+        if (v.readyState < 2) return;
+        if (v.dataset.done === 'true') return;   // already ended, waiting for group-restart
+        if (t > (v.duration || 0)) return;       // master has passed this video's end
+        if (Math.abs(v.currentTime - t) > 0.15) {
+          try { v.currentTime = t; } catch (_) {}
+        }
+      });
+    }, 500);
   })();
 </script>
 
