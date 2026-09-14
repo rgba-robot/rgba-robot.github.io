@@ -38,18 +38,19 @@
 <header class="hero">
   <div class="container">
     <h1 class="title">
-      <span class="a">Acoustic Video</span> Robot Perception
+      <span class="a">Acoustic Video</span> Perception
     </h1>
     <p class="subtitle">
-      Acoustic-Video Perception for Robot Manipulation with Occluded Contact Dynamics
+      for Robot Manipulation with Occluded Contact Dynamics
     </p>
 
     <ul class="authors">
-      <li><a href="#">Anonymous Authors<sup>1</sup></a></li>
+      <li><a href="#">Anonymous Authors</a></li>
+      <!-- <li><a href="#">Anonymous Authors<sup>1</sup></a></li> -->
     </ul>
-    <ul class="affiliations">
+    <!-- <ul class="affiliations">
       <li><sup>1</sup>In Submission to ICRA 2027</li>
-    </ul>
+    </ul> -->
 
     <div class="links">
       <a class="btn" href="static/paper/ICRA27_RGBS.pdf"><span>📄</span> Paper</a>
@@ -922,13 +923,15 @@
       load(b.dataset.task);
     }));
 
-    // ==== Hard-sync all 4 method videos to a shared clock ====
-    // The longest video is the master. Every 500 ms, snap each other video's
-    // currentTime to the master's (as long as the master hasn't passed the
-    // follower's own duration — shorter videos stay paused on their last frame
-    // and only restart together via the maybeRestart() logic above).
+    // ==== Smooth sync of the 4 method videos to a shared clock ====
+    // The longest video is the master. Small drift (30–500 ms) is corrected by
+    // nudging playbackRate ±3% — invisible to the eye. Only massive drift
+    // (>500 ms, typically after a screen-lock/resume) causes a hard seek.
+    // Shorter videos pause on their last frame and wait for group-restart.
+    const SOFT = 0.03;   // 30 ms — ignore below
+    const HARD = 0.50;   // 500 ms — snap above
+    const NUDGE = 0.03;  // ±3% playback-rate correction
     setInterval(() => {
-      // pick the longest ready video as master
       let master = null;
       for (const v of videos) {
         if (v.readyState < 2 || !isFinite(v.duration)) continue;
@@ -939,13 +942,49 @@
       videos.forEach(v => {
         if (v === master) return;
         if (v.readyState < 2) return;
-        if (v.dataset.done === 'true') return;   // already ended, waiting for group-restart
-        if (t > (v.duration || 0)) return;       // master has passed this video's end
-        if (Math.abs(v.currentTime - t) > 0.15) {
+        if (v.dataset.done === 'true') return;
+        if (t > (v.duration || 0)) return;
+        const dt = v.currentTime - t;
+        const absDt = Math.abs(dt);
+        if (absDt > HARD) {
           try { v.currentTime = t; } catch (_) {}
+          v.playbackRate = 1;
+        } else if (absDt > SOFT) {
+          v.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
+        } else {
+          v.playbackRate = 1;
         }
       });
     }, 500);
+
+    // ==== Preload adjacent-task videos in the background ====
+    // Fetching bytes into the browser cache (via a plain HTTP GET) means when
+    // the user clicks a different tab, video.load() just uses the cached bytes
+    // instead of a fresh network round-trip.
+    const METHODS = ['vision-only', 'maniwav', 'rgba-attention', 'rgba-history'];
+    const TASKS   = Array.from(tabs).map(b => b.dataset.task);
+    let prefetched = false;
+    function prefetchAll() {
+      if (prefetched) return;
+      prefetched = true;
+      TASKS.forEach(task => {
+        METHODS.forEach(m => {
+          const url = `static/videos/results/${task}/${m}.mp4`;
+          // A hidden <link rel="prefetch"> nudges the browser into caching
+          // without decoding. Falls back to fetch() for browsers that ignore it.
+          const link = document.createElement('link');
+          link.rel = 'prefetch';
+          link.as = 'video';
+          link.href = url;
+          document.head.appendChild(link);
+        });
+      });
+    }
+    // Kick off prefetching a couple seconds after page load so the initial
+    // task's videos have priority and mobile users on cellular don't get slammed immediately.
+    setTimeout(prefetchAll, 3000);
+    // Also prefetch on any tab hover — desktop users get near-instant swaps.
+    tabs.forEach(b => b.addEventListener('mouseenter', prefetchAll, { once: true }));
   })();
 </script>
 
