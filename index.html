@@ -590,6 +590,31 @@
       followers.forEach(f => f.addEventListener('loadeddata', alignAll));
     });
 
+    // ==== Keep each attention row's two videos (Vision-Only ↔ AV-Attention) in sync ====
+    // Same rule as the Results grid: the longer of the two is the master; every 500 ms
+    // the shorter one snaps to the master's currentTime if drift exceeds 150 ms.
+    document.querySelectorAll('.attn-row').forEach(row => {
+      const vs = Array.from(row.querySelectorAll('video'));
+      if (vs.length < 2) return;
+      setInterval(() => {
+        let master = null;
+        for (const v of vs) {
+          if (v.readyState < 2 || !isFinite(v.duration)) continue;
+          if (!master || v.duration > master.duration) master = v;
+        }
+        if (!master || master.paused) return;
+        const t = master.currentTime;
+        vs.forEach(v => {
+          if (v === master) return;
+          if (v.readyState < 2) return;
+          if (t > (v.duration || 0)) return;
+          if (Math.abs(v.currentTime - t) > 0.15) {
+            try { v.currentTime = t; } catch (_) {}
+          }
+        });
+      }, 500);
+    });
+
     // ==== Play-only-when-visible, group-aware ====
     // Individual videos: play/pause based on their own visibility.
     // Grouped videos (bundled comparisons): if ANY member is visible, all play; if
@@ -752,11 +777,11 @@
     <div class="stat-row">
       <div class="stat">
         <div class="stat-num">+21.0%</div>
-        <div class="stat-label">Task success rate<br /><span>vs. baselines, averaged across tasks</span></div>
+        <div class="stat-label">Task success rate<br /><span>vs. two baselines, averaged across tasks</span></div>
       </div>
       <div class="stat">
         <div class="stat-num">+16.1%</div>
-        <div class="stat-label">Task progress<br /><span>vs. baselines, averaged across tasks</span></div>
+        <div class="stat-label">Task progress<br /><span>vs. two baselines, averaged across tasks</span></div>
       </div>
     </div>
   </div>
