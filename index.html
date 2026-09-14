@@ -697,22 +697,39 @@
       window.addEventListener('focus',    resumeAll);   // switching back to Safari
 
       // (c) Post-load retries — iOS Safari often silently rejects the very first .play()
-      // even when muted+playsinline+autoplay are all set. Retrying after 0.3s/1s/2.5s catches
+      // even when muted+playsinline+autoplay are all set. Retrying multiple times catches
       // videos whose metadata arrives late, videos throttled by Low Power / Low Data mode, and
       // videos where the initial IntersectionObserver callback ran before decoding was ready.
-      [300, 1000, 2500].forEach(ms => setTimeout(resumeAll, ms));
+      [300, 1000, 2500, 5000, 10000].forEach(ms => setTimeout(resumeAll, ms));
 
       // (d) First user gesture unlocks any video that iOS held muted-autoplay-but-not-actually-playing.
       // A tap or scroll on the page counts as a real gesture that iOS accepts for .play().
+      // We ALSO call video.load() on every video the first time, because iOS Safari otherwise
+      // ignores preload="auto" and won't fetch bytes until a gesture-initiated play() is issued.
       let gestureUnlocked = false;
       const unlockOnGesture = () => {
         if (gestureUnlocked) return;
         gestureUnlocked = true;
+        document.querySelectorAll('video').forEach(v => {
+          try { v.load(); } catch (_) {}
+        });
         resumeAll();
+        // Two follow-up retries after the browser has had a chance to actually fetch.
+        setTimeout(resumeAll, 400);
+        setTimeout(resumeAll, 1500);
       };
       ['touchstart', 'pointerdown', 'click', 'scroll'].forEach(evt =>
         window.addEventListener(evt, unlockOnGesture, { once: false, passive: true, capture: true })
       );
+
+      // (e) Also force-load every video once the DOM is ready. On desktop this is a no-op
+      // (the browser was going to fetch anyway). On mobile Safari this kicks the fetch that
+      // preload="auto" was supposed to trigger but didn't.
+      window.addEventListener('load', () => {
+        document.querySelectorAll('video').forEach(v => {
+          if (v.readyState === 0) { try { v.load(); } catch (_) {} }
+        });
+      });
     }
   })();
 </script>
