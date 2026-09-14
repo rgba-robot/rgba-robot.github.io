@@ -670,6 +670,24 @@
       });
       window.addEventListener('pageshow', resumeAll);   // bfcache restore
       window.addEventListener('focus',    resumeAll);   // switching back to Safari
+
+      // (c) Post-load retries — iOS Safari often silently rejects the very first .play()
+      // even when muted+playsinline+autoplay are all set. Retrying after 0.3s/1s/2.5s catches
+      // videos whose metadata arrives late, videos throttled by Low Power / Low Data mode, and
+      // videos where the initial IntersectionObserver callback ran before decoding was ready.
+      [300, 1000, 2500].forEach(ms => setTimeout(resumeAll, ms));
+
+      // (d) First user gesture unlocks any video that iOS held muted-autoplay-but-not-actually-playing.
+      // A tap or scroll on the page counts as a real gesture that iOS accepts for .play().
+      let gestureUnlocked = false;
+      const unlockOnGesture = () => {
+        if (gestureUnlocked) return;
+        gestureUnlocked = true;
+        resumeAll();
+      };
+      ['touchstart', 'pointerdown', 'click', 'scroll'].forEach(evt =>
+        window.addEventListener(evt, unlockOnGesture, { once: false, passive: true, capture: true })
+      );
     }
   })();
 </script>
