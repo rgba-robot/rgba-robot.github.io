@@ -590,11 +590,39 @@
     });
 
     // ==== Keep each attention row's two videos (Vision-Only ↔ AV-Attention) in sync ====
-    // Same rule as the Results grid: the longer of the two is the master; every 500 ms
-    // the shorter one snaps to the master's currentTime if drift exceeds 150 ms.
+    // Native `loop` loops each video independently → on mobile, once the pair drifts by
+    // a frame the loop boundaries desynchronize permanently. Instead, drop `loop`, then
+    // restart both together the moment both end (results-grid recipe), and nudge
+    // playbackRate ±3% mid-play for invisible micro-corrections.
     document.querySelectorAll('.attn-row').forEach(row => {
       const vs = Array.from(row.querySelectorAll('video'));
       if (vs.length < 2) return;
+
+      vs.forEach(v => { v.loop = false; v.removeAttribute('loop'); v.dataset.done = 'false'; });
+
+      let restarting = false;
+      function maybeRestart() {
+        if (restarting) return;
+        if (!vs.every(v => v.dataset.done === 'true')) return;
+        restarting = true;
+        vs.forEach(v => { v.dataset.done = 'false'; });
+        vs.forEach(v => {
+          try { v.currentTime = 0; } catch (_) {}
+          const p = v.play();
+          if (p && p.catch) p.catch(() => {});
+        });
+        setTimeout(() => { restarting = false; }, 100);
+      }
+      function markDone(v) { v.dataset.done = 'true'; maybeRestart(); }
+      vs.forEach(v => {
+        v.addEventListener('ended', () => markDone(v));
+        v.addEventListener('error', () => markDone(v));
+        v.addEventListener('loadedmetadata', () => {
+          if (!isFinite(v.duration) || v.duration === 0) markDone(v);
+        });
+      });
+
+      const SOFT = 0.03, HARD = 0.50, NUDGE = 0.03;
       setInterval(() => {
         let master = null;
         for (const v of vs) {
@@ -606,9 +634,17 @@
         vs.forEach(v => {
           if (v === master) return;
           if (v.readyState < 2) return;
+          if (v.dataset.done === 'true') return;
           if (t > (v.duration || 0)) return;
-          if (Math.abs(v.currentTime - t) > 0.15) {
+          const dt = v.currentTime - t;
+          const absDt = Math.abs(dt);
+          if (absDt > HARD) {
             try { v.currentTime = t; } catch (_) {}
+            v.playbackRate = 1;
+          } else if (absDt > SOFT) {
+            v.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
+          } else {
+            v.playbackRate = 1;
           }
         });
       }, 500);
