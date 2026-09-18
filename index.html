@@ -324,6 +324,32 @@
   // Only one video on the page may be unmuted at a time; every video gets a
   // corner audio button (auto-injected for non-comparator videos).
   (function () {
+    // Mobile detection is used all over: pull it up so early bootstrap can use it.
+    const IS_MOBILE = window.matchMedia('(max-width: 720px)').matches;
+
+    // === Mobile video-decode budget ==========================================
+    // The page ships 30+ autoplaying <video> elements. Mobile browsers have a
+    // hard ceiling on concurrent hardware decoders (typically 4). Past that
+    // ceiling, decoders get evicted and the file re-downloads on every wake —
+    // which was causing Chrome mobile to spin through play/reload cycles and,
+    // in the worst case, the phone to kernel-panic under sustained memory
+    // pressure. Strip autoplay + preload from every video up front and let the
+    // IntersectionObserver below hand out plays one-at-a-time.
+    if (IS_MOBILE) {
+      document.querySelectorAll('video').forEach(v => {
+        v.autoplay = false;
+        v.removeAttribute('autoplay');
+        v.preload = 'none';
+        v.setAttribute('preload', 'none');
+      });
+      // The teaser is 41 MB. Never autoplay it on cellular; it already has
+      // native `controls` + a poster, so tapping play is a one-touch action.
+      document.querySelectorAll('.teaser video').forEach(v => {
+        try { v.pause(); } catch (_) {}
+        v.dataset.noAutoplay = 'true';
+      });
+    }
+
     const registeredButtons = new Set();
     let activeVideo = null;
     function silenceAll() {
@@ -370,7 +396,7 @@
     // On narrow/mobile viewports, iOS Safari can't reliably decode both cmp-a and cmp-b
     // simultaneously (and dragging a hair-line slider with a finger is fiddly anyway).
     // Swap the split-slider for a single-video AV/RGB toggle button on mobile.
-    const IS_MOBILE = window.matchMedia('(max-width: 720px)').matches;
+    // (IS_MOBILE declared at IIFE top.)
 
     const tiles = document.querySelectorAll('.video-frame.compare');
     tiles.forEach(tile => {
@@ -378,39 +404,28 @@
       const caption = tile.querySelector('figcaption');
 
       if (IS_MOBILE) {
+        // Single-video source swap. The old dual-video z-index approach kept
+        // BOTH decoders alive per tile (10 total across the 5-tile grid), which
+        // ate through the mobile decoder budget and forced constant reloads.
+        // Swapping <source> costs one black flash on toggle in exchange for
+        // half the memory and network pressure.
         const viewport = document.createElement('div');
         viewport.className = 'compare-viewport compare-mobile';
         viewport.dataset.mode = 'rgba';
-        // Both videos autoplay continuously; only the active one sits on top.
-        // Toggle just swaps z-index — no pause/play/seek, so no black frame and
-        // no drift between the two streams.
         viewport.innerHTML = `
-          <video class="cmp-mobile cmp-mobile-rgba" autoplay muted loop playsinline preload="auto">
+          <video class="cmp-mobile cmp-mobile-single" muted loop playsinline preload="none">
             <source src="${base}/rgbs.mp4" type="video/mp4">
-          </video>
-          <video class="cmp-mobile cmp-mobile-rgb"  autoplay muted loop playsinline preload="auto">
-            <source src="${base}/rgb.mp4"  type="video/mp4">
           </video>
           <span class="cmp-label cmp-label-l">AV</span>
           <button type="button" class="cmp-mobile-toggle" aria-pressed="true">Show RGB</button>
         `;
         tile.insertBefore(viewport, caption);
 
-        const videoRGBA = viewport.querySelector('.cmp-mobile-rgba');
-        const videoRGB  = viewport.querySelector('.cmp-mobile-rgb');
-        const label     = viewport.querySelector('.cmp-label-l');
-        const toggle    = viewport.querySelector('.cmp-mobile-toggle');
-        attachAudioButton(videoRGBA, viewport);
-
-        // Hard-resync every 500ms: playbackRate tweaks aren't reliable on iOS.
-        setInterval(() => {
-          if (videoRGBA.readyState < 2 || videoRGB.readyState < 2) return;
-          if (videoRGBA.paused || videoRGB.paused) return;
-          const dt = videoRGB.currentTime - videoRGBA.currentTime;
-          if (Math.abs(dt) > 0.15) {
-            try { videoRGB.currentTime = videoRGBA.currentTime; } catch (_) {}
-          }
-        }, 500);
+        const video   = viewport.querySelector('.cmp-mobile-single');
+        const source  = video.querySelector('source');
+        const label   = viewport.querySelector('.cmp-label-l');
+        const toggle  = viewport.querySelector('.cmp-mobile-toggle');
+        attachAudioButton(video, viewport);
 
         let showingRGBA = true;
         toggle.addEventListener('click', (e) => {
@@ -421,6 +436,15 @@
           label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
           toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show AV';
           toggle.setAttribute('aria-pressed', showingRGBA);
+          const savedTime = video.currentTime;
+          source.src = `${base}/${showingRGBA ? 'rgbs.mp4' : 'rgb.mp4'}`;
+          video.load();
+          const resume = () => {
+            try { video.currentTime = savedTime; } catch (_) {}
+            const p = video.play();
+            if (p && p.catch) p.catch(() => {});
+          };
+          video.addEventListener('loadedmetadata', resume, { once: true });
         });
 
         return;   // skip the desktop slider setup for this tile
@@ -669,102 +693,170 @@
       });
 
       const visible = new Set();
+      // Track intersection ratio per video so mobile can pick the single most-
+      // visible group (or solo video) and let everything else stay paused.
+      const ratio = new Map();
+      // On mobile, videos flagged data-no-autoplay (e.g. the 41 MB teaser)
+      // never autoplay from the observer — the user taps native controls.
+      function mayAutoplay(v) { return !(IS_MOBILE && v.dataset.noAutoplay === 'true'); }
       function apply(v, shouldPlay) {
-        if (shouldPlay) {
+        if (shouldPlay && mayAutoplay(v)) {
           if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
         } else {
           if (!v.paused) v.pause();
         }
       }
 
-      const io = new IntersectionObserver((entries) => {
-        const groupsToRefresh = new Set();
-        const soloUpdates     = [];
-        entries.forEach(entry => {
-          const v = entry.target;
-          const isVis = entry.isIntersecting && entry.intersectionRatio > 0.25;
-          if (isVis) visible.add(v); else visible.delete(v);
+      // Mobile: use a higher visibility threshold AND restrict active playback
+      // to a single group at a time (the one most on-screen). This keeps
+      // concurrent decoders at ~1-4 across the whole page instead of ~10-20.
+      const MOBILE_VIS_THRESHOLD = 0.5;
+      const DESKTOP_VIS_THRESHOLD = 0.25;
+      function updatePlayback() {
+        const threshold = IS_MOBILE ? MOBILE_VIS_THRESHOLD : DESKTOP_VIS_THRESHOLD;
+
+        // Compute per-group "best ratio" (max member ratio).
+        const groupRatio = new Map();
+        groupMembers.forEach((vs, g) => {
+          let best = 0;
+          vs.forEach(v => { best = Math.max(best, ratio.get(v) || 0); });
+          groupRatio.set(g, best);
+        });
+
+        if (IS_MOBILE) {
+          // Rank all "units" (groups + solo videos) by best visibility, then
+          // let only the top one play. Everything else pauses. And within a
+          // winning group, only members that are actually on-screen play —
+          // res-grid stacks 4-tall on mobile and only one tile fits in the
+          // viewport at a time; running all four would burn the decoder pool.
+          const IN_VIEW = 0.05;
+          const units = [];
+          groupRatio.forEach((r, g) => { if (r >= threshold) units.push({ kind: 'group', g, r }); });
+          document.querySelectorAll('video').forEach(v => {
+            if (videoGroup.has(v)) return;
+            const r = ratio.get(v) || 0;
+            if (r >= threshold) units.push({ kind: 'solo', v, r });
+          });
+          units.sort((a, b) => b.r - a.r);
+          const winner = units[0];
+          document.querySelectorAll('video').forEach(v => {
+            const g = videoGroup.get(v);
+            let shouldPlay = false;
+            if (winner) {
+              if (winner.kind === 'group' && g === winner.g) {
+                shouldPlay = (ratio.get(v) || 0) >= IN_VIEW;
+              } else if (winner.kind === 'solo' && v === winner.v) {
+                shouldPlay = true;
+              }
+            }
+            apply(v, shouldPlay);
+          });
+          return;
+        }
+
+        // Desktop: original semantics — every visible group/solo plays.
+        document.querySelectorAll('video').forEach(v => {
           const g = videoGroup.get(v);
-          if (g) groupsToRefresh.add(g);
-          else   soloUpdates.push({ v, isVis });
+          const shouldPlay = g
+            ? (groupRatio.get(g) || 0) >= threshold
+            : (ratio.get(v) || 0) >= threshold;
+          apply(v, shouldPlay);
         });
-        soloUpdates.forEach(({ v, isVis }) => apply(v, isVis));
-        groupsToRefresh.forEach(g => {
-          const vs = groupMembers.get(g);
-          const anyVis = [...vs].some(v => visible.has(v));
-          vs.forEach(v => apply(v, anyVis));
+      }
+
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          ratio.set(entry.target, entry.isIntersecting ? entry.intersectionRatio : 0);
+          if (entry.isIntersecting && entry.intersectionRatio > 0.25) visible.add(entry.target);
+          else visible.delete(entry.target);
         });
-      }, { threshold: [0, 0.25, 0.5] });
+        updatePlayback();
+      }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
 
       document.querySelectorAll('video').forEach(v => io.observe(v));
 
-      // ==== iOS resilience: (a) retry play when a video finally becomes playable,
-      // and (b) resume everything on screen-wake / tab-resume / bfcache restore. ====
+      // ==== Retry / mass-load handlers ==================================
+      // These block ran unconditionally before and are the direct cause of
+      // mobile-Chrome's play/reload cycles and the memory pressure that led
+      // to kernel panics on some devices: (b)/(c)/(d)/(e) each triggered a
+      // .load() or .play() on EVERY <video> on the page, which forced the
+      // decoder pool to churn. Keep the desktop behavior; on mobile trust
+      // the IntersectionObserver above and let videos load on-demand.
       function isCurrentlyVisible(v) {
         if (getComputedStyle(v).visibility === 'hidden') return false;
         const r = v.getBoundingClientRect();
         const h = window.innerHeight || document.documentElement.clientHeight;
         return r.bottom > 0 && r.top < h;
       }
-      function shouldPlay(v) {
-        // Grouped video plays if ANY member of its group is visible; else per-video.
+      function shouldPlayNow(v) {
+        if (IS_MOBILE && v.dataset.noAutoplay === 'true') return false;
         const g = videoGroup.get(v);
         if (g) return [...groupMembers.get(g)].some(isCurrentlyVisible);
         return isCurrentlyVisible(v);
       }
       function tryPlay(v) {
-        if (!shouldPlay(v) || !v.paused) return;
+        if (!shouldPlayNow(v) || !v.paused) return;
         const p = v.play(); if (p && p.catch) p.catch(() => {});
       }
-      // (a) retry on canplay / loadedmetadata (fires when the browser is finally ready)
+      // (a) retry on canplay / loadedmetadata (fires when the browser is finally ready).
+      // Cheap — only fires per-video when its OWN load completes, no mass iteration.
       document.querySelectorAll('video').forEach(v => {
         v.addEventListener('canplay',        () => tryPlay(v));
         v.addEventListener('loadedmetadata', () => tryPlay(v));
       });
-      // (b) resume everything that should be playing when the phone wakes / tab resumes
-      function resumeAll() {
-        document.querySelectorAll('video').forEach(tryPlay);
+
+      if (!IS_MOBILE) {
+        // (b) resume everything that should be playing when the phone wakes / tab resumes
+        function resumeAll() {
+          document.querySelectorAll('video').forEach(tryPlay);
+        }
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') resumeAll();
+        });
+        window.addEventListener('pageshow', resumeAll);   // bfcache restore
+        window.addEventListener('focus',    resumeAll);   // switching back to Safari
+
+        // (c) Post-load retries — iOS Safari often silently rejects the very first .play()
+        // even when muted+playsinline+autoplay are all set. Retrying multiple times catches
+        // videos whose metadata arrives late, videos throttled by Low Power / Low Data mode, and
+        // videos where the initial IntersectionObserver callback ran before decoding was ready.
+        [300, 1000, 2500, 5000, 10000].forEach(ms => setTimeout(resumeAll, ms));
+
+        // (d) First user gesture unlocks any video that iOS held muted-autoplay-but-not-actually-playing.
+        // A tap or scroll on the page counts as a real gesture that iOS accepts for .play().
+        // We ALSO call video.load() on every video the first time, because iOS Safari otherwise
+        // ignores preload="auto" and won't fetch bytes until a gesture-initiated play() is issued.
+        let gestureUnlocked = false;
+        const unlockOnGesture = () => {
+          if (gestureUnlocked) return;
+          gestureUnlocked = true;
+          document.querySelectorAll('video').forEach(v => {
+            try { v.load(); } catch (_) {}
+          });
+          resumeAll();
+          setTimeout(resumeAll, 400);
+          setTimeout(resumeAll, 1500);
+        };
+        ['touchstart', 'pointerdown', 'click', 'scroll'].forEach(evt =>
+          window.addEventListener(evt, unlockOnGesture, { once: false, passive: true, capture: true })
+        );
+
+        // (e) Also force-load every video once the DOM is ready. On desktop this is a no-op
+        // (the browser was going to fetch anyway).
+        window.addEventListener('load', () => {
+          document.querySelectorAll('video').forEach(v => {
+            if (v.readyState === 0) { try { v.load(); } catch (_) {} }
+          });
+        });
+      } else {
+        // Mobile: on bfcache restore / tab resume, just re-evaluate the
+        // observer's picks — do NOT iterate every video.
+        const softResume = () => { try { updatePlayback(); } catch (_) {} };
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') softResume();
+        });
+        window.addEventListener('pageshow', softResume);
       }
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') resumeAll();
-      });
-      window.addEventListener('pageshow', resumeAll);   // bfcache restore
-      window.addEventListener('focus',    resumeAll);   // switching back to Safari
-
-      // (c) Post-load retries — iOS Safari often silently rejects the very first .play()
-      // even when muted+playsinline+autoplay are all set. Retrying multiple times catches
-      // videos whose metadata arrives late, videos throttled by Low Power / Low Data mode, and
-      // videos where the initial IntersectionObserver callback ran before decoding was ready.
-      [300, 1000, 2500, 5000, 10000].forEach(ms => setTimeout(resumeAll, ms));
-
-      // (d) First user gesture unlocks any video that iOS held muted-autoplay-but-not-actually-playing.
-      // A tap or scroll on the page counts as a real gesture that iOS accepts for .play().
-      // We ALSO call video.load() on every video the first time, because iOS Safari otherwise
-      // ignores preload="auto" and won't fetch bytes until a gesture-initiated play() is issued.
-      let gestureUnlocked = false;
-      const unlockOnGesture = () => {
-        if (gestureUnlocked) return;
-        gestureUnlocked = true;
-        document.querySelectorAll('video').forEach(v => {
-          try { v.load(); } catch (_) {}
-        });
-        resumeAll();
-        // Two follow-up retries after the browser has had a chance to actually fetch.
-        setTimeout(resumeAll, 400);
-        setTimeout(resumeAll, 1500);
-      };
-      ['touchstart', 'pointerdown', 'click', 'scroll'].forEach(evt =>
-        window.addEventListener(evt, unlockOnGesture, { once: false, passive: true, capture: true })
-      );
-
-      // (e) Also force-load every video once the DOM is ready. On desktop this is a no-op
-      // (the browser was going to fetch anyway). On mobile Safari this kicks the fetch that
-      // preload="auto" was supposed to trigger but didn't.
-      window.addEventListener('load', () => {
-        document.querySelectorAll('video').forEach(v => {
-          if (v.readyState === 0) { try { v.load(); } catch (_) {} }
-        });
-      });
     }
   })();
 </script>
@@ -995,30 +1087,31 @@
     // Fetching bytes into the browser cache (via a plain HTTP GET) means when
     // the user clicks a different tab, video.load() just uses the cached bytes
     // instead of a fresh network round-trip.
-    const METHODS = ['vision-only', 'maniwav', 'rgba-attention', 'rgba-history'];
-    const TASKS   = Array.from(tabs).map(b => b.dataset.task);
-    let prefetched = false;
-    function prefetchAll() {
-      if (prefetched) return;
-      prefetched = true;
-      TASKS.forEach(task => {
-        METHODS.forEach(m => {
-          const url = `static/videos/results/${task}/${m}.mp4`;
-          // A hidden <link rel="prefetch"> nudges the browser into caching
-          // without decoding. Falls back to fetch() for browsers that ignore it.
-          const link = document.createElement('link');
-          link.rel = 'prefetch';
-          link.as = 'video';
-          link.href = url;
-          document.head.appendChild(link);
+    // Mobile: SKIP the mass prefetch. Pulling ~20 mp4s (>100 MB) in the
+    // background is one of the routes to the memory/panic issue and is
+    // wasted work over cellular.
+    const IS_MOBILE_RES = window.matchMedia('(max-width: 720px)').matches;
+    if (!IS_MOBILE_RES) {
+      const METHODS = ['vision-only', 'maniwav', 'rgba-attention', 'rgba-history'];
+      const TASKS   = Array.from(tabs).map(b => b.dataset.task);
+      let prefetched = false;
+      function prefetchAll() {
+        if (prefetched) return;
+        prefetched = true;
+        TASKS.forEach(task => {
+          METHODS.forEach(m => {
+            const url = `static/videos/results/${task}/${m}.mp4`;
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.as = 'video';
+            link.href = url;
+            document.head.appendChild(link);
+          });
         });
-      });
+      }
+      setTimeout(prefetchAll, 3000);
+      tabs.forEach(b => b.addEventListener('mouseenter', prefetchAll, { once: true }));
     }
-    // Kick off prefetching a couple seconds after page load so the initial
-    // task's videos have priority and mobile users on cellular don't get slammed immediately.
-    setTimeout(prefetchAll, 3000);
-    // Also prefetch on any tab hover — desktop users get near-instant swaps.
-    tabs.forEach(b => b.addEventListener('mouseenter', prefetchAll, { once: true }));
   })();
 </script>
 
