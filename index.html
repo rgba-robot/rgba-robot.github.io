@@ -423,6 +423,43 @@
     // Swap the split-slider for a single-video AV/RGB toggle button on mobile.
     // (IS_MOBILE declared at IIFE top.)
 
+    // Keep a comparator pair in lock-step: A is the master, B follows.
+    // Small drift → nudge B's playbackRate; big drift (loop boundary) → hard resync.
+    function syncPair(videoA, videoB) {
+      const HARD_THRESHOLD = 0.30;   // seconds — beyond this, snap
+      const SOFT_THRESHOLD = 0.03;   // seconds — within this, do nothing
+      const NUDGE          = 0.05;   // ±5% rate correction for smooth catch-up
+      function syncFollower() {
+        if (videoA.readyState < 2 || videoB.readyState < 2) return;
+        const dt = videoB.currentTime - videoA.currentTime;
+        const absDt = Math.abs(dt);
+        if (absDt > HARD_THRESHOLD) {
+          videoB.currentTime = videoA.currentTime;
+          videoB.playbackRate = 1;
+        } else if (absDt > SOFT_THRESHOLD) {
+          videoB.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
+        } else {
+          videoB.playbackRate = 1;
+        }
+      }
+      setInterval(syncFollower, 250);
+      // Force resync at each loop boundary of A (currentTime jumps from ~duration to ~0).
+      videoA.addEventListener('seeked', syncFollower);
+      videoA.addEventListener('timeupdate', () => {
+        if (videoA.currentTime < 0.15 && videoB.currentTime > (videoA.duration || 0) - 0.5) {
+          videoB.currentTime = videoA.currentTime;
+        }
+      });
+      // Start both from the same point once data is available, so they begin aligned.
+      const alignStart = () => {
+        if (videoA.readyState >= 2 && videoB.readyState >= 2) {
+          try { videoB.currentTime = videoA.currentTime; } catch (_) {}
+        }
+      };
+      videoA.addEventListener('loadeddata', alignStart);
+      videoB.addEventListener('loadeddata', alignStart);
+    }
+
     const tiles = document.querySelectorAll('.video-frame.compare');
     tiles.forEach(tile => {
       const base = tile.dataset.src.replace(/\/$/, '');
@@ -430,28 +467,33 @@
       const caption = tile.querySelector('figcaption');
 
       if (IS_MOBILE) {
-        // Single-video source swap. The old dual-video z-index approach kept
-        // BOTH decoders alive per tile (10 total across the 5-tile grid), which
-        // ate through the mobile decoder budget and forced constant reloads.
-        // Swapping <source> costs one black flash on toggle in exchange for
-        // half the memory and network pressure.
+        // Two videos, both playing in lock-step, one on top via z-index
+        // (CSS: .compare-mobile[data-mode]). The toggle only flips data-mode —
+        // nothing loads, nothing seeks, so there is no black frame and no gap.
+        // Decoder budget: the observer lets one unit play at a time, so this is
+        // two decoders for the ONE active tile, not ten across the grid (the
+        // reason the earlier dual-video version was dropped).
         const viewport = document.createElement('div');
         viewport.className = 'compare-viewport compare-mobile';
         viewport.dataset.mode = 'rgba';
         viewport.innerHTML = `
-          <video class="cmp-mobile cmp-mobile-single" muted loop playsinline preload="none" poster="${posterBase}/rgbs.jpg">
+          <video class="cmp-mobile cmp-mobile-rgba" muted loop playsinline preload="none" poster="${posterBase}/rgbs.jpg">
             <source src="${base}/rgbs.mp4" type="video/mp4">
+          </video>
+          <video class="cmp-mobile cmp-mobile-rgb" muted loop playsinline preload="none" poster="${posterBase}/rgb.jpg">
+            <source src="${base}/rgb.mp4" type="video/mp4">
           </video>
           <span class="cmp-label cmp-label-l">AV</span>
           <button type="button" class="cmp-mobile-toggle" aria-pressed="true">Show RGB</button>
         `;
         tile.insertBefore(viewport, caption);
 
-        const video   = viewport.querySelector('.cmp-mobile-single');
-        const source  = video.querySelector('source');
+        const videoA  = viewport.querySelector('.cmp-mobile-rgba');
+        const videoB  = viewport.querySelector('.cmp-mobile-rgb');
         const label   = viewport.querySelector('.cmp-label-l');
         const toggle  = viewport.querySelector('.cmp-mobile-toggle');
-        attachAudioButton(video, viewport);
+        attachAudioButton(videoA, viewport);
+        syncPair(videoA, videoB);
 
         let showingRGBA = true;
         toggle.addEventListener('click', (e) => {
@@ -462,26 +504,15 @@
           label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
           toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show AV';
           toggle.setAttribute('aria-pressed', showingRGBA);
-          const savedTime = video.currentTime;
-          // Freeze the current frame as the poster so the swap never shows
-          // black; the other variant's bytes are already in the HTTP cache
-          // (prefetched below), so the reload itself takes a few ms.
-          try {
-            const c = document.createElement('canvas');
-            c.width = video.videoWidth; c.height = video.videoHeight;
-            c.getContext('2d').drawImage(video, 0, 0);
-            video.poster = c.toDataURL('image/jpeg', 0.7);
-          } catch (_) {
-            video.poster = `${posterBase}/${showingRGBA ? 'rgbs' : 'rgb'}.jpg`;
+          // Safety net: if the clip being revealed fell behind (e.g. it was
+          // still loading when the other started), snap it to the shown clock.
+          const show = showingRGBA ? videoA : videoB;
+          const hide = showingRGBA ? videoB : videoA;
+          if (show.readyState >= 2 && hide.readyState >= 2 &&
+              Math.abs(show.currentTime - hide.currentTime) > 0.1) {
+            try { show.currentTime = hide.currentTime; } catch (_) {}
           }
-          source.src = `${base}/${showingRGBA ? 'rgbs.mp4' : 'rgb.mp4'}`;
-          video.load();
-          const resume = () => {
-            try { video.currentTime = savedTime; } catch (_) {}
-            const p = video.play();
-            if (p && p.catch) p.catch(() => {});
-          };
-          video.addEventListener('loadedmetadata', resume, { once: true });
+          if (show.paused && !hide.paused) { const p = show.play(); if (p && p.catch) p.catch(() => {}); }
         });
 
         return;   // skip the desktop slider setup for this tile
@@ -513,40 +544,7 @@
       const videoB = viewport.querySelector('.cmp-b');
       attachAudioButton(videoA, viewport);
 
-      // Keep the two videos in sync: A is the master, B follows.
-      // Small drift → nudge B's playbackRate; big drift (loop boundary) → hard resync.
-      const HARD_THRESHOLD = 0.30;   // seconds — beyond this, snap
-      const SOFT_THRESHOLD = 0.03;   // seconds — within this, do nothing
-      const NUDGE          = 0.05;   // ±5% rate correction for smooth catch-up
-      function syncFollower() {
-        if (videoA.readyState < 2 || videoB.readyState < 2) return;
-        const dt = videoB.currentTime - videoA.currentTime;
-        const absDt = Math.abs(dt);
-        if (absDt > HARD_THRESHOLD) {
-          videoB.currentTime = videoA.currentTime;
-          videoB.playbackRate = 1;
-        } else if (absDt > SOFT_THRESHOLD) {
-          videoB.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
-        } else {
-          videoB.playbackRate = 1;
-        }
-      }
-      const syncInterval = setInterval(syncFollower, 250);
-      // Force resync at each loop boundary of A (currentTime jumps from ~duration to ~0).
-      videoA.addEventListener('seeked', syncFollower);
-      videoA.addEventListener('timeupdate', () => {
-        if (videoA.currentTime < 0.15 && videoB.currentTime > (videoA.duration || 0) - 0.5) {
-          videoB.currentTime = videoA.currentTime;
-        }
-      });
-      // Start both from 0 once metadata is available, so they begin aligned.
-      const alignStart = () => {
-        if (videoA.readyState >= 2 && videoB.readyState >= 2) {
-          try { videoB.currentTime = videoA.currentTime; } catch (_) {}
-        }
-      };
-      videoA.addEventListener('loadeddata', alignStart);
-      videoB.addEventListener('loadeddata', alignStart);
+      syncPair(videoA, videoB);
 
       const setPos = (pct) => {
         pct = Math.min(100, Math.max(0, pct));
@@ -747,7 +745,7 @@
     // none are visible, all pause. Keeps side-by-side / stacked pairs in step
     // even when the group is taller than the viewport.
     if ('IntersectionObserver' in window) {
-      const GROUP_SELECTORS = ['.attn-row', '.res-grid', '.p-diagram'];
+      const GROUP_SELECTORS = ['.attn-row', '.res-grid', '.p-diagram', '.compare-mobile'];
       const videoGroup   = new Map();   // <video> -> group container
       const groupMembers = new Map();   // container -> Set of <video>
       GROUP_SELECTORS.forEach(sel => {
@@ -925,12 +923,6 @@
             if (v.networkState !== HTMLMediaElement.NETWORK_LOADING) { try { v.load(); } catch (_) {} }
           }
         });
-        // Mobile comparator: cache the other variant too, so the AV/RGB toggle
-        // swaps instantly instead of downloading mid-tap.
-        if (v.classList.contains('cmp-mobile-single') && url) {
-          prefetchVideo(/rgbs\.mp4$/.test(url) ? url.replace(/rgbs\.mp4$/, 'rgb.mp4')
-                                              : url.replace(/rgb\.mp4$/, 'rgbs.mp4'));
-        }
       }
       const warmer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
