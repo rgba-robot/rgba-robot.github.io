@@ -653,126 +653,123 @@
       attachAudioButton(video, shell);
     });
 
-    // ==== Keep perception-input diagram videos in sync (RGB source is master) ====
-    document.querySelectorAll('.p-diagram').forEach(diagram => {
-      const master    = diagram.querySelector('.p-source video');
-      const followers = diagram.querySelectorAll('.p-output video');
-      if (!master || followers.length === 0) return;
+    // ==== Group sync: clips that must run as one (attention rows, perception diagram) ====
+    // Why the old per-group code drifted: each clip was started on its own by
+    // the visibility observer (so they began tens to hundreds of ms apart), the
+    // rate corrections were tiny (3-5%: a 300 ms gap took ~10 s to close), and
+    // native `loop` let each clip wrap on its own clock every cycle.
+    // This controller:
+    //  - start: play() is only ever issued to the whole group in one tick, and
+    //    only once every clip that should play has buffered (a "rendezvous");
+    //  - run: the longest playing clip is the clock; followers get a
+    //    proportional playbackRate correction (up to ±15%) for small drift and
+    //    a seek for large drift;
+    //  - loop: `loop` is removed; when the clock ends, everyone is seeked to 0
+    //    and released together (rendezvous again);
+    //  - the visibility observer talks to the group through v.__wake(), never
+    //    play(), and marks each member data-wanted so mobile's "only members
+    //    on screen" rule still holds.
+    function syncGroup(vs) {
+      const SOFT = 0.04, HARD = 0.25, MAX_NUDGE = 0.15;
+      vs.forEach(v => { v.loop = false; v.removeAttribute('loop'); v.playbackRate = 1; });
+      const wanted   = v => v.dataset.wanted === 'true';
+      const broken   = v => v.dataset.broken === 'true';
+      const usable   = v => !broken(v) && v.readyState >= 1 && isFinite(v.duration) && v.duration > 0;
+      const buffered = v => v.readyState >= 3;
+      // The clock: longest clip that should be playing (so on mobile, where an
+      // off-screen member is paused, the clock is always a running clip).
+      function master() {
+        let m = null;
+        for (const v of vs) { if (usable(v) && wanted(v) && (!m || v.duration > m.duration)) m = v; }
+        if (!m) for (const v of vs) { if (usable(v) && (!m || v.duration > m.duration)) m = v; }
+        return m;
+      }
+      function play(v)  { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+      function pause(v) { if (!v.paused) { v.dataset.autoPaused = 'true'; v.pause(); } }
+      function playWanted() { vs.forEach(v => { if (wanted(v) && !broken(v) && v.paused && !v.ended) play(v); }); }
+      const allBuffered = () => vs.every(v => !wanted(v) || broken(v) || buffered(v));
 
-      const HARD = 0.30, SOFT = 0.03, NUDGE = 0.05;
-      function tick() {
-        if (master.readyState < 2) return;
-        followers.forEach(f => {
-          if (f.readyState < 2) return;
-          const dt    = f.currentTime - master.currentTime;
-          const absDt = Math.abs(dt);
-          if (absDt > HARD) {
-            f.currentTime = master.currentTime;
-            f.playbackRate = 1;
-          } else if (absDt > SOFT) {
-            f.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
-          } else {
-            f.playbackRate = 1;
-          }
+      let busy = false;          // a rendezvous is in progress
+      let alignPending = false;  // released cold; align once everyone has buffered
+      // Rendezvous: pause everyone, seek to t, and once every clip that should
+      // play has buffered, release them all in the same tick.
+      function rendezvous(t) {
+        if (busy) return;
+        busy = true;
+        vs.forEach(v => {
+          v.playbackRate = 1;
+          pause(v);
+          if (usable(v)) { try { v.currentTime = Math.min(t, Math.max(0, v.duration - 0.05)); } catch (_) {} }
+        });
+        const t0 = performance.now();
+        (function wait() {
+          if (allBuffered() || performance.now() - t0 > 2500) { busy = false; playWanted(); }
+          else setTimeout(wait, 30);
+        })();
+      }
+      function restart() { rendezvous(0); }
+      // Called by the observer for every member it wants playing.
+      function wake() {
+        if (busy || !vs.some(wanted)) return;
+        const m = master();
+        // Cold start (not everything buffered yet): release now so the loads
+        // begin, and align once everyone has buffered — the one moment a small
+        // jump is acceptable; with the prefetch cache it lands within ~100 ms.
+        if (!m || !allBuffered()) { alignPending = true; playWanted(); return; }
+        if (m.ended)  { restart(); return; }
+        if (m.paused) { rendezvous(m.currentTime); return; }
+        // Group already running: late joiners jump onto the clock.
+        vs.forEach(v => {
+          if (v === m || !wanted(v) || broken(v) || !v.paused || v.ended) return;
+          if (usable(v)) { try { v.currentTime = m.currentTime; } catch (_) {} }
+          play(v);
         });
       }
-      setInterval(tick, 250);
-
-      master.addEventListener('seeked', tick);
-      master.addEventListener('timeupdate', () => {
-        // At master's loop wrap: snap followers to 0 if they haven't wrapped yet.
-        if (master.currentTime < 0.15) {
-          const dur = master.duration || 0;
-          followers.forEach(f => {
-            if (f.currentTime > dur - 0.5) f.currentTime = master.currentTime;
-          });
+      setInterval(() => {
+        if (busy) return;
+        const m = master();
+        if (!m) return;
+        if (alignPending) {
+          if (!allBuffered()) return;
+          alignPending = false;
+          let off = 0;
+          vs.forEach(v => { if (v !== m && usable(v) && !v.paused) off = Math.max(off, Math.abs(v.currentTime - m.currentTime)); });
+          if (off > SOFT) { rendezvous(m.currentTime); return; }
         }
-      });
-
-      const alignAll = () => {
-        if (master.readyState < 2) return;
-        followers.forEach(f => {
-          if (f.readyState >= 2) { try { f.currentTime = master.currentTime; } catch (_) {} }
+        if (m.ended)  { if (vs.some(wanted)) restart(); return; }
+        if (m.paused) return;
+        const t = m.currentTime;
+        vs.forEach(v => {
+          if (v === m || broken(v) || v.readyState < 2 || v.paused || v.ended) return;
+          if (t > (v.duration || 0) - 0.05) return;          // a shorter clip at its end just holds
+          const dt = v.currentTime - t;                       // > 0: follower is ahead
+          const a  = Math.abs(dt);
+          if (a > HARD)      { try { v.currentTime = t + 0.02; } catch (_) {} v.playbackRate = 1; }
+          else if (a > SOFT) { v.playbackRate = 1 - Math.max(-MAX_NUDGE, Math.min(MAX_NUDGE, dt * 0.6)); }
+          else               { v.playbackRate = 1; }
         });
-      };
-      master.addEventListener('loadeddata', alignAll);
-      followers.forEach(f => f.addEventListener('loadeddata', alignAll));
-    });
+      }, 200);
+      vs.forEach(v => {
+        v.__wake = wake;
+        v.addEventListener('ended', () => { if (v === master() && vs.some(wanted)) restart(); });
+        // A clip that cannot play (404 → `error` fires on the <source>, bad
+        // file, 0 duration) is dropped from the group instead of blocking it.
+        const broke = () => { v.dataset.broken = 'true'; };
+        v.addEventListener('error', broke);
+        v.querySelectorAll('source').forEach(src => src.addEventListener('error', broke));
+        v.addEventListener('loadedmetadata', () => { if (!isFinite(v.duration) || v.duration === 0) broke(); });
+      });
+    }
 
-    // ==== Keep each attention row's two videos (Vision-Only ↔ AV-Attention) in sync ====
-    // Native `loop` loops each video independently → on mobile, once the pair drifts by
-    // a frame the loop boundaries desynchronize permanently. Instead, drop `loop`, then
-    // restart both together the moment both end (results-grid recipe), and nudge
-    // playbackRate ±3% mid-play for invisible micro-corrections.
+    // Perception-input diagram: RGB source + its two acoustic representations.
+    document.querySelectorAll('.p-diagram').forEach(diagram => {
+      const vs = Array.from(diagram.querySelectorAll('video'));
+      if (vs.length >= 2) syncGroup(vs);
+    });
+    // Attention rows: Vision-Only ↔ AV-Attention.
     document.querySelectorAll('.attn-row').forEach(row => {
       const vs = Array.from(row.querySelectorAll('video'));
-      if (vs.length < 2) return;
-
-      vs.forEach(v => { v.loop = false; v.removeAttribute('loop'); v.dataset.done = 'false'; });
-
-      let restarting = false;
-      function restartAll() {
-        if (restarting) return;
-        restarting = true;
-        vs.forEach(v => { v.dataset.done = 'false'; });
-        vs.forEach(v => {
-          try { v.currentTime = 0; } catch (_) {}
-          // Desktop: the pair runs together. Mobile: only cells on screen (the
-          // observer starts the other as it scrolls in).
-          if (!IS_MOBILE || onScreen([v])) {
-            const p = v.play();
-            if (p && p.catch) p.catch(() => {});
-          }
-        });
-        setTimeout(() => { restarting = false; }, 100);
-      }
-      function maybeRestart() {
-        if (!vs.every(v => v.dataset.done === 'true')) return;
-        if (!onScreen(vs)) return;   // the watchdog below restarts it once back on screen
-        restartAll();
-      }
-      function markDone(v) { v.dataset.done = 'true'; maybeRestart(); }
-      vs.forEach(v => {
-        v.addEventListener('ended', () => markDone(v));
-        v.addEventListener('error', () => markDone(v));
-        // With <source> children a failed load fires `error` on the <source>,
-        // not on the <video> — without this the row would wait forever.
-        v.querySelectorAll('source').forEach(src => src.addEventListener('error', () => markDone(v)));
-        v.addEventListener('loadedmetadata', () => {
-          if (!isFinite(v.duration) || v.duration === 0) markDone(v);
-        });
-      });
-
-      const SOFT = 0.03, HARD = 0.50, NUDGE = 0.03;
-      setInterval(() => {
-        let master = null;
-        for (const v of vs) {
-          if (v.readyState < 2 || !isFinite(v.duration)) continue;
-          if (!master || v.duration > master.duration) master = v;
-        }
-        if (!master) return;
-        // Watchdog: the longest clip has finished → restart the row together,
-        // even if its sibling stalled or never fired `ended`. On screen only.
-        if (master.ended) { if (onScreen(vs)) restartAll(); return; }
-        if (master.paused) return;
-        const t = master.currentTime;
-        vs.forEach(v => {
-          if (v === master) return;
-          if (v.readyState < 2) return;
-          if (v.dataset.done === 'true') return;
-          if (t > (v.duration || 0)) return;
-          const dt = v.currentTime - t;
-          const absDt = Math.abs(dt);
-          if (absDt > HARD) {
-            try { v.currentTime = t; } catch (_) {}
-            v.playbackRate = 1;
-          } else if (absDt > SOFT) {
-            v.playbackRate = dt > 0 ? 1 - NUDGE : 1 + NUDGE;
-          } else {
-            v.playbackRate = 1;
-          }
-        });
-      }, 500);
+      if (vs.length >= 2) syncGroup(vs);
     });
 
     // ==== Play-only-when-visible, group-aware ====
@@ -801,14 +798,18 @@
       // never autoplay from the observer — the user taps native controls.
       function mayAutoplay(v) { return !(IS_MOBILE && v.dataset.noAutoplay === 'true'); }
       function apply(v, shouldPlay) {
-        if (shouldPlay && mayAutoplay(v)) {
-          // A finished clip in a non-looping group reports paused=true. Leave it
-          // on its last frame — the group's own restart logic owns it.
-          if (v.ended) return;
+        const want = shouldPlay && mayAutoplay(v);
+        v.dataset.wanted = want ? 'true' : 'false';
+        if (want) {
           // Respect a pause the visitor made through native controls.
           if (v.dataset.userPaused === 'true') return;
           // The mobile comparator's parked clip: primed, but only its toggle starts it.
           if (v.dataset.standby === 'true') return;
+          // Synced groups (attention rows, perception diagram) start as one.
+          if (v.__wake) { v.__wake(); return; }
+          // A finished clip in a non-looping group reports paused=true. Leave it
+          // on its last frame — the group's own restart logic owns it.
+          if (v.ended) return;
           if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
         } else {
           if (!v.paused) { v.dataset.autoPaused = 'true'; v.pause(); }
