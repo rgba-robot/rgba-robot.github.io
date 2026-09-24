@@ -68,6 +68,19 @@
       <video autoplay muted loop playsinline controls poster="static/images/teaser_poster.jpg">
         <source src="static/videos/teaser.mp4" type="video/mp4" />
       </video>
+      <script>
+        // Phones: never download the 15 MB teaser unasked. The browser picks a
+        // media source only after reaching a stable state, i.e. after this
+        // inline script — so stripping autoplay here (not at DOMContentLoaded,
+        // which waits for the deferred KaTeX bundle) is what actually prevents
+        // the fetch. The main script below adds the tap-to-play handling.
+        if (window.matchMedia('(max-width: 720px)').matches) {
+          document.querySelectorAll('.teaser video').forEach(v => {
+            v.autoplay = false; v.removeAttribute('autoplay');
+            v.preload = 'none'; v.setAttribute('preload', 'none');
+          });
+        }
+      </script>
       <figcaption>
         We present <strong>Acoustic Video (AV) robot perception</strong> — using AV as a robot perception to improve manipulation performance under occluded contact dynamics.
       </figcaption>
@@ -138,7 +151,7 @@
     <h2>AV Perception System</h2>
     <div class="grid grid-2">
       <figure class="video-frame">
-        <video muted loop playsinline controls preload="none">
+        <video muted loop playsinline controls preload="none" poster="static/images/posters/beamforming_explain.jpg">
           <source src="static/videos/beamforming_explain.mp4" type="video/mp4" />
         </video>
         <figcaption>We replace conventional overhead camera into an acoustic camera.</figcaption>
@@ -169,7 +182,7 @@
           demonstration length.
         </p>
         <figure class="p-source">
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/task_rgb_rgba/thread_cable/rgb.jpg">
             <source src="static/videos/task_rgb_rgba/thread_cable/rgb.mp4" type="video/mp4" />
           </video>
           <figcaption>Reference View</figcaption>
@@ -194,14 +207,14 @@
       <div class="p-outputs">
         <figure class="p-output">
           <span class="p-tag">History Representation</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/task_rgb_rgba/thread_cable/audio_beamforming_history.jpg">
             <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_history.mp4" type="video/mp4" />
           </video>
           <div class="p-formula">$$H(x,y,T) = \max_{0 \le t \le T} A(x,y,t)$$</div>
         </figure>
         <figure class="p-output">
           <span class="p-tag">Future Representation</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/task_rgb_rgba/thread_cable/audio_beamforming_future.jpg">
             <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_future.mp4" type="video/mp4" />
           </video>
           <div class="p-formula">$$F(x,y,T) = \max_{T \le t \le T_{final}} A(x,y,t)$$</div>
@@ -413,6 +426,7 @@
     const tiles = document.querySelectorAll('.video-frame.compare');
     tiles.forEach(tile => {
       const base = tile.dataset.src.replace(/\/$/, '');
+      const posterBase = base.replace('static/videos/', 'static/images/posters/');
       const caption = tile.querySelector('figcaption');
 
       if (IS_MOBILE) {
@@ -425,7 +439,7 @@
         viewport.className = 'compare-viewport compare-mobile';
         viewport.dataset.mode = 'rgba';
         viewport.innerHTML = `
-          <video class="cmp-mobile cmp-mobile-single" muted loop playsinline preload="none">
+          <video class="cmp-mobile cmp-mobile-single" muted loop playsinline preload="none" poster="${posterBase}/rgbs.jpg">
             <source src="${base}/rgbs.mp4" type="video/mp4">
           </video>
           <span class="cmp-label cmp-label-l">AV</span>
@@ -449,6 +463,17 @@
           toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show AV';
           toggle.setAttribute('aria-pressed', showingRGBA);
           const savedTime = video.currentTime;
+          // Freeze the current frame as the poster so the swap never shows
+          // black; the other variant's bytes are already in the HTTP cache
+          // (prefetched below), so the reload itself takes a few ms.
+          try {
+            const c = document.createElement('canvas');
+            c.width = video.videoWidth; c.height = video.videoHeight;
+            c.getContext('2d').drawImage(video, 0, 0);
+            video.poster = c.toDataURL('image/jpeg', 0.7);
+          } catch (_) {
+            video.poster = `${posterBase}/${showingRGBA ? 'rgbs' : 'rgb'}.jpg`;
+          }
           source.src = `${base}/${showingRGBA ? 'rgbs.mp4' : 'rgb.mp4'}`;
           video.load();
           const resume = () => {
@@ -467,8 +492,8 @@
       viewport.className = 'compare-viewport';
       viewport.style.setProperty('--pos', '50%');
       viewport.innerHTML = `
-        <video class="cmp-a" muted loop playsinline preload="none"><source src="${base}/rgb.mp4"  type="video/mp4"></video>
-        <video class="cmp-b" muted loop playsinline preload="none"><source src="${base}/rgbs.mp4" type="video/mp4"></video>
+        <video class="cmp-a" muted loop playsinline preload="none" poster="${posterBase}/rgb.jpg"><source src="${base}/rgb.mp4"  type="video/mp4"></video>
+        <video class="cmp-b" muted loop playsinline preload="none" poster="${posterBase}/rgbs.jpg"><source src="${base}/rgbs.mp4" type="video/mp4"></video>
         <span class="cmp-label cmp-label-l">AV</span>
         <span class="cmp-label cmp-label-r">RGB</span>
         <div class="cmp-handle" role="slider" tabindex="0"
@@ -766,7 +791,7 @@
       // Mobile: use a higher visibility threshold AND restrict active playback
       // to a single group at a time (the one most on-screen). This keeps
       // concurrent decoders at ~1-4 across the whole page instead of ~10-20.
-      const MOBILE_VIS_THRESHOLD = 0.5;
+      const MOBILE_VIS_THRESHOLD = 0.25;   // start as soon as a quarter is on screen; one unit plays at a time anyway
       const DESKTOP_VIS_THRESHOLD = 0.25;
       function updatePlayback() {
         const threshold = IS_MOBILE ? MOBILE_VIS_THRESHOLD : DESKTOP_VIS_THRESHOLD;
@@ -786,14 +811,24 @@
           // res-grid stacks 4-tall on mobile and only one tile fits in the
           // viewport at a time; running all four would burn the decoder pool.
           const IN_VIEW = 0.05;
+          // Distance of an element's centre from the viewport centre — the
+          // tie-breaker when several units are fully visible (three task tiles
+          // fit on a phone screen; without this the topmost always won and the
+          // tile the visitor actually centred never played).
+          const mid = (window.innerHeight || document.documentElement.clientHeight) / 2;
+          const dist = (el) => { const r = el.getBoundingClientRect(); return Math.abs((r.top + r.bottom) / 2 - mid); };
           const units = [];
-          groupRatio.forEach((r, g) => { if (r >= threshold) units.push({ kind: 'group', g, r }); });
+          groupRatio.forEach((r, g) => {
+            if (r < threshold) return;
+            let d = Infinity; groupMembers.get(g).forEach(v => { d = Math.min(d, dist(v)); });
+            units.push({ kind: 'group', g, r, d });
+          });
           document.querySelectorAll('video').forEach(v => {
             if (videoGroup.has(v)) return;
             const r = ratio.get(v) || 0;
-            if (r >= threshold) units.push({ kind: 'solo', v, r });
+            if (r >= threshold) units.push({ kind: 'solo', v, r, d: dist(v) });
           });
-          units.sort((a, b) => b.r - a.r);
+          units.sort((a, b) => (b.r - a.r) || (a.d - b.d));
           const winner = units[0];
           document.querySelectorAll('video').forEach(v => {
             const g = videoGroup.get(v);
@@ -831,35 +866,80 @@
 
       document.querySelectorAll('video').forEach(v => io.observe(v));
 
-      // ==== Warm-up: start fetching shortly before a clip scrolls into view ====
-      // Everything is preload="none", so this second observer, with a generous
-      // rootMargin, flips a clip (and its group-mates) to preload="auto" once it
-      // is within about one viewport of the screen — buffered by the time it
-      // shows, without fetching the whole page. Desktop only; on mobile every
-      // byte stays on demand.
-      if (!IS_MOBILE) {
-        const warmed = new Set();
-        function warm(v) {
-          if (warmed.has(v)) return;
-          warmed.add(v);
-          if (v.dataset.noAutoplay === 'true') return;
-          v.preload = 'auto';
-          v.setAttribute('preload', 'auto');
-          // Kick the fetch only if nothing else has: a clip the visibility
-          // observer already asked to play (paused=false) is loading on its own.
-          if (v.readyState === 0 && v.paused && v.networkState !== HTMLMediaElement.NETWORK_LOADING) {
-            try { v.load(); } catch (_) {}
-          }
+      // ==== Prefetch: pull a clip's bytes into the HTTP cache before it shows ====
+      // Everything is preload="none", so nothing downloads on page load. This
+      // second observer, with a generous rootMargin, fetch()es a clip (plus its
+      // group-mates, and the comparator's other variant) into the browser's
+      // HTTP cache once it is within about a viewport of the screen. A plain
+      // fetch holds no decoder or media-player slot — what matters on phones —
+      // and the <video> then loads from cache in a few ms when asked to play.
+      // (Verified in Chrome: the media element reuses the cached response.)
+      const PREFETCH_PARALLEL = IS_MOBILE ? 2 : 3;
+      const prefetchQueue = [];
+      const prefetchSeen  = new Set();
+      let   prefetchBusy  = 0;
+      function pumpPrefetch() {
+        while (prefetchBusy < PREFETCH_PARALLEL && prefetchQueue.length) {
+          const job = prefetchQueue.shift();
+          prefetchBusy++;
+          fetch(job.url, { priority: 'low', credentials: 'same-origin' })
+            .then(async res => {
+              if (!res.ok || !res.body) return;
+              const reader = res.body.getReader();      // drain so the whole file lands in cache
+              while (!(await reader.read()).done) { /* discard */ }
+            })
+            .catch(() => {})
+            .then(() => {
+              prefetchBusy--;
+              if (job.done) { try { job.done(); } catch (_) {} }
+              pumpPrefetch();
+            });
         }
-        const warmer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (!entry.isIntersecting) return;
-            const g = videoGroup.get(entry.target);
-            if (g) groupMembers.get(g).forEach(warm); else warm(entry.target);
-          });
-        }, { rootMargin: '100% 0px 100% 0px' });
-        document.querySelectorAll('video').forEach(v => warmer.observe(v));
       }
+      function prefetchVideo(url, done) {
+        if (!url) return;
+        if (prefetchSeen.has(url)) { if (done) done(); return; }
+        prefetchSeen.add(url);
+        prefetchQueue.push({ url, done });
+        pumpPrefetch();
+      }
+      window.__prefetchVideo = prefetchVideo;   // the results tabs reuse this on hover
+      function srcOf(v) {
+        const s = v.querySelector('source');
+        return (s && s.getAttribute('src')) || v.getAttribute('src') || '';
+      }
+      const warmed = new Set();
+      function warm(v) {
+        if (warmed.has(v)) return;
+        warmed.add(v);
+        if (v.dataset.noAutoplay === 'true') return;
+        const url = srcOf(v);
+        // Desktop: once the bytes are cached, let the element buffer from cache
+        // so playback starts the instant it scrolls in. Mobile keeps the element
+        // cold — a paused element holding data can still pin a decoder — and
+        // loads from cache on play().
+        prefetchVideo(url, IS_MOBILE ? null : () => {
+          if (v.readyState === 0 && v.paused) {
+            v.preload = 'auto';
+            v.setAttribute('preload', 'auto');
+            if (v.networkState !== HTMLMediaElement.NETWORK_LOADING) { try { v.load(); } catch (_) {} }
+          }
+        });
+        // Mobile comparator: cache the other variant too, so the AV/RGB toggle
+        // swaps instantly instead of downloading mid-tap.
+        if (v.classList.contains('cmp-mobile-single') && url) {
+          prefetchVideo(/rgbs\.mp4$/.test(url) ? url.replace(/rgbs\.mp4$/, 'rgb.mp4')
+                                              : url.replace(/rgb\.mp4$/, 'rgbs.mp4'));
+        }
+      }
+      const warmer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const g = videoGroup.get(entry.target);
+          if (g) groupMembers.get(g).forEach(warm); else warm(entry.target);
+        });
+      }, { rootMargin: IS_MOBILE ? '100% 0px 100% 0px' : '150% 0px 150% 0px' });
+      document.querySelectorAll('video').forEach(v => warmer.observe(v));
 
       // ==== Late-ready retry ============================================
       function isCurrentlyVisible(v) {
@@ -923,7 +1003,7 @@
       <figure class="res-tile" data-method="vision-only">
         <div class="res-media">
           <span class="res-tag">Vision-Only</span>
-          <video muted playsinline preload="none" poster="static/images/results_posters/threading/vision-only.jpg">
+          <video muted playsinline preload="none" poster="static/images/posters/results/threading/vision-only.jpg">
             <source src="static/videos/results/threading/vision-only.mp4" type="video/mp4" />
           </video>
         </div>
@@ -932,7 +1012,7 @@
       <figure class="res-tile" data-method="maniwav">
         <div class="res-media">
           <span class="res-tag">ManiWAV-inspired</span>
-          <video muted playsinline preload="none" poster="static/images/results_posters/threading/maniwav.jpg">
+          <video muted playsinline preload="none" poster="static/images/posters/results/threading/maniwav.jpg">
             <source src="static/videos/results/threading/maniwav.mp4" type="video/mp4" />
           </video>
         </div>
@@ -941,7 +1021,7 @@
       <figure class="res-tile" data-method="rgba-attention">
         <div class="res-media">
           <span class="res-tag res-tag-accent">AV-Attention <em>(Ours)</em></span>
-          <video muted playsinline preload="none" poster="static/images/results_posters/threading/rgba-attention.jpg">
+          <video muted playsinline preload="none" poster="static/images/posters/results/threading/rgba-attention.jpg">
             <source src="static/videos/results/threading/rgba-attention.mp4" type="video/mp4" />
           </video>
         </div>
@@ -950,7 +1030,7 @@
       <figure class="res-tile" data-method="rgba-history">
         <div class="res-media">
           <span class="res-tag res-tag-accent">AV-History <em>(Ours)</em></span>
-          <video muted playsinline preload="none" poster="static/images/results_posters/threading/rgba-history.jpg">
+          <video muted playsinline preload="none" poster="static/images/posters/results/threading/rgba-history.jpg">
             <source src="static/videos/results/threading/rgba-history.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1092,7 +1172,7 @@
         const method = tile.dataset.method;
         const video  = tile.querySelector('video');
         const source = video.querySelector('source');
-        video.poster = `static/images/results_posters/${task}/${method}.jpg`;
+        video.poster = `static/images/posters/results/${task}/${method}.jpg`;
         source.src = `static/videos/results/${task}/${method}.mp4`;
         video.preload = 'auto';          // the visitor asked for this task: fetch it now
         video.load();
@@ -1162,9 +1242,11 @@
         if (!task || prefetched.has(task)) return;
         prefetched.add(task);
         METHODS.forEach(m => {
+          const url = `static/videos/results/${task}/${m}.mp4`;
+          if (window.__prefetchVideo) { window.__prefetchVideo(url); return; }   // shared HTTP-cache prefetch
           const link = document.createElement('link');
           link.rel  = 'prefetch';
-          link.href = `static/videos/results/${task}/${m}.mp4`;
+          link.href = url;
           document.head.appendChild(link);
         });
       }
@@ -1187,13 +1269,13 @@
         <div class="attn-pair">
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
-            <video muted loop playsinline preload="none">
+            <video muted loop playsinline preload="none" poster="static/images/posters/attn/threading/rgb.jpg">
               <source src="static/videos/attn/threading/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
             <span class="attn-tag attn-tag-accent">AV-Attention</span>
-            <video muted loop playsinline preload="none">
+            <video muted loop playsinline preload="none" poster="static/images/posters/attn/threading/rgba.jpg">
               <source src="static/videos/attn/threading/rgba.mp4" type="video/mp4" />
             </video>
           </div>
@@ -1205,13 +1287,13 @@
         <div class="attn-pair">
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
-            <video muted loop playsinline preload="none">
+            <video muted loop playsinline preload="none" poster="static/images/posters/attn/peeling/rgb.jpg">
               <source src="static/videos/attn/peeling/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
             <span class="attn-tag attn-tag-accent">AV-Attention</span>
-            <video muted loop playsinline preload="none">
+            <video muted loop playsinline preload="none" poster="static/images/posters/attn/peeling/rgba.jpg">
               <source src="static/videos/attn/peeling/rgba.mp4" type="video/mp4" />
             </video>
           </div>
@@ -1223,13 +1305,13 @@
         <div class="attn-pair">
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
-            <video muted loop playsinline preload="none">
+            <video muted loop playsinline preload="none" poster="static/images/posters/attn/cleaning/rgb.jpg">
               <source src="static/videos/attn/cleaning/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
             <span class="attn-tag attn-tag-accent">AV-Attention</span>
-            <video muted loop playsinline preload="none">
+            <video muted loop playsinline preload="none" poster="static/images/posters/attn/cleaning/rgba.jpg">
               <source src="static/videos/attn/cleaning/rgba.mp4" type="video/mp4" />
             </video>
           </div>
@@ -1250,7 +1332,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">Vision-Only</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/failures/grinding_vision-only_demo_14_wrist_right.jpg">
             <source src="static/videos/failures/grinding_vision-only_demo_14_wrist_right.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1259,7 +1341,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag fail-tag-attention">AV-Attention</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/failures/grinding_attention_demo_10_wrist_left.jpg">
             <source src="static/videos/failures/grinding_attention_demo_10_wrist_left.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1268,7 +1350,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag fail-tag-attention">AV-Attention</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/failures/cutting_attention_demo_5.jpg">
             <source src="static/videos/failures/cutting_attention_demo_5.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1277,7 +1359,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">Vision-Only</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/failures/cleaning_vision-only_demo_3.jpg">
             <source src="static/videos/failures/cleaning_vision-only_demo_3.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1286,7 +1368,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">ManiWAV-inspired</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/failures/cleaning_maniwav_demo_19.jpg">
             <source src="static/videos/failures/cleaning_maniwav_demo_19.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1295,7 +1377,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag fail-tag-history">AV-History</span>
-          <video muted loop playsinline preload="none">
+          <video muted loop playsinline preload="none" poster="static/images/posters/failures/cleaning_history_demo_7.jpg">
             <source src="static/videos/failures/cleaning_history_demo_7.mp4" type="video/mp4" />
           </video>
         </div>
