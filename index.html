@@ -95,19 +95,19 @@
     </p>
     <div class="grid grid-3">
       <figure class="video-frame">
-        <video autoplay muted loop playsinline>
+        <video muted loop playsinline preload="none">
           <source src="static/videos/occluded_pushing.mp4" type="video/mp4" />
         </video>
         <figcaption>Pushing — contact patch hidden by the object.</figcaption>
       </figure>
       <figure class="video-frame">
-        <video autoplay muted loop playsinline>
+        <video muted loop playsinline preload="none">
           <source src="static/videos/occluded_threading.mp4" type="video/mp4" />
         </video>
         <figcaption>Threading — cable tip disappears inside the conduit.</figcaption>
       </figure>
       <figure class="video-frame">
-        <video autoplay muted loop playsinline>
+        <video muted loop playsinline preload="none">
           <source src="static/videos/occluded_generic.mp4" type="video/mp4" />
         </video>
         <figcaption>Surface contact — friction cues, no visible signal.</figcaption>
@@ -138,7 +138,7 @@
     <h2>AV Perception System</h2>
     <div class="grid grid-2">
       <figure class="video-frame">
-        <video autoplay muted loop playsinline controls>
+        <video muted loop playsinline controls preload="none">
           <source src="static/videos/beamforming_explain.mp4" type="video/mp4" />
         </video>
         <figcaption>We replace conventional overhead camera into an acoustic camera.</figcaption>
@@ -169,7 +169,7 @@
           demonstration length.
         </p>
         <figure class="p-source">
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/task_rgb_rgba/thread_cable/rgb.mp4" type="video/mp4" />
           </video>
           <figcaption>Reference View</figcaption>
@@ -194,14 +194,14 @@
       <div class="p-outputs">
         <figure class="p-output">
           <span class="p-tag">History Representation</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_history.mp4" type="video/mp4" />
           </video>
           <div class="p-formula">$$H(x,y,T) = \max_{0 \le t \le T} A(x,y,t)$$</div>
         </figure>
         <figure class="p-output">
           <span class="p-tag">Future Representation</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/task_rgb_rgba/thread_cable/audio_beamforming_future.mp4" type="video/mp4" />
           </video>
           <div class="p-formula">$$F(x,y,T) = \max_{T \le t \le T_{final}} A(x,y,t)$$</div>
@@ -323,9 +323,21 @@
   // Split-slider comparator (task tiles) + universal audio manager.
   // Only one video on the page may be unmuted at a time; every video gets a
   // corner audio button (auto-injected for non-comparator videos).
-  (function () {
+  // NOTE: this script sits above the results / attention / failure sections in
+  // the document, so it must wait for the DOM to finish parsing — otherwise
+  // those 17 videos never get observed, budgeted, or synced.
+  document.addEventListener('DOMContentLoaded', function () {
     // Mobile detection is used all over: pull it up so early bootstrap can use it.
     const IS_MOBILE = window.matchMedia('(max-width: 720px)').matches;
+
+    // True if any of the given videos intersects the viewport (cheap rect test).
+    function onScreen(list) {
+      const h = window.innerHeight || document.documentElement.clientHeight;
+      return Array.from(list).some(v => {
+        const r = v.getBoundingClientRect();
+        return r.bottom > 0 && r.top < h && r.width > 0;
+      });
+    }
 
     // === Mobile video-decode budget ==========================================
     // The page ships 30+ autoplaying <video> elements. Mobile browsers have a
@@ -455,8 +467,8 @@
       viewport.className = 'compare-viewport';
       viewport.style.setProperty('--pos', '50%');
       viewport.innerHTML = `
-        <video class="cmp-a" autoplay muted loop playsinline preload="auto"><source src="${base}/rgb.mp4"  type="video/mp4"></video>
-        <video class="cmp-b" autoplay muted loop playsinline preload="auto"><source src="${base}/rgbs.mp4" type="video/mp4"></video>
+        <video class="cmp-a" muted loop playsinline preload="none"><source src="${base}/rgb.mp4"  type="video/mp4"></video>
+        <video class="cmp-b" muted loop playsinline preload="none"><source src="${base}/rgbs.mp4" type="video/mp4"></video>
         <span class="cmp-label cmp-label-l">AV</span>
         <span class="cmp-label cmp-label-r">RGB</span>
         <div class="cmp-handle" role="slider" tabindex="0"
@@ -547,6 +559,21 @@
       });
     });
 
+    // ==== Lazy by default ====
+    // Nothing below the teaser autoplays on its own or preloads bytes. The
+    // IntersectionObserver further down starts fetching a clip shortly before
+    // it scrolls into view and plays it only while visible, so a first visit
+    // no longer pulls every clip on the page (~80 MB) up front.
+    document.querySelectorAll('video').forEach(v => {
+      if (v.closest('.teaser')) return;
+      v.autoplay = false;
+      v.removeAttribute('autoplay');
+      if (v.getAttribute('preload') !== 'none') {
+        v.preload = 'none';
+        v.setAttribute('preload', 'none');
+      }
+    });
+
     // ==== Auto-inject an audio button on every video (rollout badge is pure CSS) ====
     document.querySelectorAll('video').forEach(video => {
       const parent = video.parentElement;
@@ -625,22 +652,33 @@
       vs.forEach(v => { v.loop = false; v.removeAttribute('loop'); v.dataset.done = 'false'; });
 
       let restarting = false;
-      function maybeRestart() {
+      function restartAll() {
         if (restarting) return;
-        if (!vs.every(v => v.dataset.done === 'true')) return;
         restarting = true;
         vs.forEach(v => { v.dataset.done = 'false'; });
         vs.forEach(v => {
           try { v.currentTime = 0; } catch (_) {}
-          const p = v.play();
-          if (p && p.catch) p.catch(() => {});
+          // Desktop: the pair runs together. Mobile: only cells on screen (the
+          // observer starts the other as it scrolls in).
+          if (!IS_MOBILE || onScreen([v])) {
+            const p = v.play();
+            if (p && p.catch) p.catch(() => {});
+          }
         });
         setTimeout(() => { restarting = false; }, 100);
+      }
+      function maybeRestart() {
+        if (!vs.every(v => v.dataset.done === 'true')) return;
+        if (!onScreen(vs)) return;   // the watchdog below restarts it once back on screen
+        restartAll();
       }
       function markDone(v) { v.dataset.done = 'true'; maybeRestart(); }
       vs.forEach(v => {
         v.addEventListener('ended', () => markDone(v));
         v.addEventListener('error', () => markDone(v));
+        // With <source> children a failed load fires `error` on the <source>,
+        // not on the <video> — without this the row would wait forever.
+        v.querySelectorAll('source').forEach(src => src.addEventListener('error', () => markDone(v)));
         v.addEventListener('loadedmetadata', () => {
           if (!isFinite(v.duration) || v.duration === 0) markDone(v);
         });
@@ -653,7 +691,11 @@
           if (v.readyState < 2 || !isFinite(v.duration)) continue;
           if (!master || v.duration > master.duration) master = v;
         }
-        if (!master || master.paused) return;
+        if (!master) return;
+        // Watchdog: the longest clip has finished → restart the row together,
+        // even if its sibling stalled or never fired `ended`. On screen only.
+        if (master.ended) { if (onScreen(vs)) restartAll(); return; }
+        if (master.paused) return;
         const t = master.currentTime;
         vs.forEach(v => {
           if (v === master) return;
@@ -701,11 +743,25 @@
       function mayAutoplay(v) { return !(IS_MOBILE && v.dataset.noAutoplay === 'true'); }
       function apply(v, shouldPlay) {
         if (shouldPlay && mayAutoplay(v)) {
+          // A finished clip in a non-looping group reports paused=true. Leave it
+          // on its last frame — the group's own restart logic owns it.
+          if (v.ended) return;
+          // Respect a pause the visitor made through native controls.
+          if (v.dataset.userPaused === 'true') return;
           if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
         } else {
-          if (!v.paused) v.pause();
+          if (!v.paused) { v.dataset.autoPaused = 'true'; v.pause(); }
         }
       }
+      // Tell our own pause() calls apart from the visitor pressing pause on a
+      // <video controls>; only the latter should stick.
+      document.querySelectorAll('video').forEach(v => {
+        v.addEventListener('pause', () => {
+          if (v.dataset.autoPaused === 'true') { delete v.dataset.autoPaused; return; }
+          if (v.hasAttribute('controls') && !v.ended) v.dataset.userPaused = 'true';
+        });
+        v.addEventListener('play', () => { delete v.dataset.userPaused; });
+      });
 
       // Mobile: use a higher visibility threshold AND restrict active playback
       // to a single group at a time (the one most on-screen). This keeps
@@ -775,13 +831,37 @@
 
       document.querySelectorAll('video').forEach(v => io.observe(v));
 
-      // ==== Retry / mass-load handlers ==================================
-      // These block ran unconditionally before and are the direct cause of
-      // mobile-Chrome's play/reload cycles and the memory pressure that led
-      // to kernel panics on some devices: (b)/(c)/(d)/(e) each triggered a
-      // .load() or .play() on EVERY <video> on the page, which forced the
-      // decoder pool to churn. Keep the desktop behavior; on mobile trust
-      // the IntersectionObserver above and let videos load on-demand.
+      // ==== Warm-up: start fetching shortly before a clip scrolls into view ====
+      // Everything is preload="none", so this second observer, with a generous
+      // rootMargin, flips a clip (and its group-mates) to preload="auto" once it
+      // is within about one viewport of the screen — buffered by the time it
+      // shows, without fetching the whole page. Desktop only; on mobile every
+      // byte stays on demand.
+      if (!IS_MOBILE) {
+        const warmed = new Set();
+        function warm(v) {
+          if (warmed.has(v)) return;
+          warmed.add(v);
+          if (v.dataset.noAutoplay === 'true') return;
+          v.preload = 'auto';
+          v.setAttribute('preload', 'auto');
+          // Kick the fetch only if nothing else has: a clip the visibility
+          // observer already asked to play (paused=false) is loading on its own.
+          if (v.readyState === 0 && v.paused && v.networkState !== HTMLMediaElement.NETWORK_LOADING) {
+            try { v.load(); } catch (_) {}
+          }
+        }
+        const warmer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const g = videoGroup.get(entry.target);
+            if (g) groupMembers.get(g).forEach(warm); else warm(entry.target);
+          });
+        }, { rootMargin: '100% 0px 100% 0px' });
+        document.querySelectorAll('video').forEach(v => warmer.observe(v));
+      }
+
+      // ==== Late-ready retry ============================================
       function isCurrentlyVisible(v) {
         if (getComputedStyle(v).visibility === 'hidden') return false;
         const r = v.getBoundingClientRect();
@@ -795,70 +875,30 @@
         return isCurrentlyVisible(v);
       }
       function tryPlay(v) {
-        if (!shouldPlayNow(v) || !v.paused) return;
-        const p = v.play(); if (p && p.catch) p.catch(() => {});
+        if (!shouldPlayNow(v)) return;
+        apply(v, true);
       }
-      // (a) retry on canplay / loadedmetadata (fires when the browser is finally ready).
+      // Retry on canplay / loadedmetadata (fires when the browser is finally ready).
       // Cheap — only fires per-video when its OWN load completes, no mass iteration.
       document.querySelectorAll('video').forEach(v => {
         v.addEventListener('canplay',        () => tryPlay(v));
         v.addEventListener('loadedmetadata', () => tryPlay(v));
       });
 
-      if (!IS_MOBILE) {
-        // (b) resume everything that should be playing when the phone wakes / tab resumes
-        function resumeAll() {
-          document.querySelectorAll('video').forEach(tryPlay);
-        }
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') resumeAll();
-        });
-        window.addEventListener('pageshow', resumeAll);   // bfcache restore
-        window.addEventListener('focus',    resumeAll);   // switching back to Safari
-
-        // (c) Post-load retries — iOS Safari often silently rejects the very first .play()
-        // even when muted+playsinline+autoplay are all set. Retrying multiple times catches
-        // videos whose metadata arrives late, videos throttled by Low Power / Low Data mode, and
-        // videos where the initial IntersectionObserver callback ran before decoding was ready.
-        [300, 1000, 2500, 5000, 10000].forEach(ms => setTimeout(resumeAll, ms));
-
-        // (d) First user gesture unlocks any video that iOS held muted-autoplay-but-not-actually-playing.
-        // A tap or scroll on the page counts as a real gesture that iOS accepts for .play().
-        // We ALSO call video.load() on every video the first time, because iOS Safari otherwise
-        // ignores preload="auto" and won't fetch bytes until a gesture-initiated play() is issued.
-        let gestureUnlocked = false;
-        const unlockOnGesture = () => {
-          if (gestureUnlocked) return;
-          gestureUnlocked = true;
-          document.querySelectorAll('video').forEach(v => {
-            try { v.load(); } catch (_) {}
-          });
-          resumeAll();
-          setTimeout(resumeAll, 400);
-          setTimeout(resumeAll, 1500);
-        };
-        ['touchstart', 'pointerdown', 'click', 'scroll'].forEach(evt =>
-          window.addEventListener(evt, unlockOnGesture, { once: false, passive: true, capture: true })
-        );
-
-        // (e) Also force-load every video once the DOM is ready. On desktop this is a no-op
-        // (the browser was going to fetch anyway).
-        window.addEventListener('load', () => {
-          document.querySelectorAll('video').forEach(v => {
-            if (v.readyState === 0) { try { v.load(); } catch (_) {} }
-          });
-        });
-      } else {
-        // Mobile: on bfcache restore / tab resume, just re-evaluate the
-        // observer's picks — do NOT iterate every video.
-        const softResume = () => { try { updatePlayback(); } catch (_) {} };
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') softResume();
-        });
-        window.addEventListener('pageshow', softResume);
-      }
+      // Re-evaluate the observer's picks on tab resume / bfcache restore / focus.
+      // Uses the cached intersection ratios — no mass iteration, no load()
+      // storms. (The old desktop-only "resume everything" timer ladder and the
+      // gesture handler that called load() on EVERY video on the first scroll
+      // are gone: that aborted every in-flight download exactly when the
+      // visitor started scrolling, and reset every clip on the page.)
+      const softResume = () => { try { updatePlayback(); } catch (_) {} };
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') softResume();
+      });
+      window.addEventListener('pageshow', softResume);
+      window.addEventListener('focus',    softResume);
     }
-  })();
+  });
 </script>
 
 <!-- ============ BASELINES ============ -->
@@ -883,7 +923,7 @@
       <figure class="res-tile" data-method="vision-only">
         <div class="res-media">
           <span class="res-tag">Vision-Only</span>
-          <video autoplay muted playsinline preload="auto">
+          <video muted playsinline preload="none" poster="static/images/results_posters/threading/vision-only.jpg">
             <source src="static/videos/results/threading/vision-only.mp4" type="video/mp4" />
           </video>
         </div>
@@ -892,7 +932,7 @@
       <figure class="res-tile" data-method="maniwav">
         <div class="res-media">
           <span class="res-tag">ManiWAV-inspired</span>
-          <video autoplay muted playsinline preload="auto">
+          <video muted playsinline preload="none" poster="static/images/results_posters/threading/maniwav.jpg">
             <source src="static/videos/results/threading/maniwav.mp4" type="video/mp4" />
           </video>
         </div>
@@ -901,7 +941,7 @@
       <figure class="res-tile" data-method="rgba-attention">
         <div class="res-media">
           <span class="res-tag res-tag-accent">AV-Attention <em>(Ours)</em></span>
-          <video autoplay muted playsinline preload="auto">
+          <video muted playsinline preload="none" poster="static/images/results_posters/threading/rgba-attention.jpg">
             <source src="static/videos/results/threading/rgba-attention.mp4" type="video/mp4" />
           </video>
         </div>
@@ -910,7 +950,7 @@
       <figure class="res-tile" data-method="rgba-history">
         <div class="res-media">
           <span class="res-tag res-tag-accent">AV-History <em>(Ours)</em></span>
-          <video autoplay muted playsinline preload="auto">
+          <video muted playsinline preload="none" poster="static/images/results_posters/threading/rgba-history.jpg">
             <source src="static/videos/results/threading/rgba-history.mp4" type="video/mp4" />
           </video>
         </div>
@@ -999,25 +1039,45 @@
     // block the group. isDone flips true on `ended` or `error`.
     videos.forEach(v => { v.dataset.done = 'false'; });
 
+    const IS_MOBILE_RES = window.matchMedia('(max-width: 720px)').matches;
+    function onScreen(list) {
+      const h = window.innerHeight || document.documentElement.clientHeight;
+      return list.some(v => {
+        const r = v.getBoundingClientRect();
+        return r.bottom > 0 && r.top < h && r.width > 0;
+      });
+    }
+
     let restarting = false;
-    function maybeRestart() {
+    function restartAll() {
       if (restarting) return;
-      if (!videos.every(v => v.dataset.done === 'true')) return;
       restarting = true;
       videos.forEach(v => { v.dataset.done = 'false'; });
       videos.forEach(v => {
         try { v.currentTime = 0; } catch (_) {}
-        const p = v.play();
-        if (p && p.catch) p.catch(() => {});
+        // Desktop: the whole grid runs together. Mobile: only tiles on screen
+        // (the observer starts the others as they scroll in).
+        if (!IS_MOBILE_RES || onScreen([v])) {
+          const p = v.play();
+          if (p && p.catch) p.catch(() => {});
+        }
       });
-      // Give the play() calls a tick to settle before another maybeRestart can fire.
+      // Give the play() calls a tick to settle before another restart can fire.
       setTimeout(() => { restarting = false; }, 100);
+    }
+    function maybeRestart() {
+      if (!videos.every(v => v.dataset.done === 'true')) return;
+      if (!onScreen(videos)) return;   // the watchdog below restarts it once back on screen
+      restartAll();
     }
     function markDone(v) { v.dataset.done = 'true'; maybeRestart(); }
 
     videos.forEach(v => {
       v.addEventListener('ended', () => markDone(v));
       v.addEventListener('error', () => markDone(v));
+      // With <source> children a failed load (404, network) fires `error` on the
+      // <source>, not on the <video> — without this one bad tile froze the grid.
+      v.querySelectorAll('source').forEach(src => src.addEventListener('error', () => markDone(v)));
       // If the source resolves and the video is unplayable (0 duration), also mark done
       v.addEventListener('loadedmetadata', () => {
         if (!isFinite(v.duration) || v.duration === 0) markDone(v);
@@ -1032,10 +1092,14 @@
         const method = tile.dataset.method;
         const video  = tile.querySelector('video');
         const source = video.querySelector('source');
+        video.poster = `static/images/results_posters/${task}/${method}.jpg`;
         source.src = `static/videos/results/${task}/${method}.mp4`;
+        video.preload = 'auto';          // the visitor asked for this task: fetch it now
         video.load();
-        const p = video.play();
-        if (p && p.catch) p.catch(() => {});
+        if (!IS_MOBILE_RES || onScreen([video])) {
+          const p = video.play();
+          if (p && p.catch) p.catch(() => {});
+        }
       });
       updateCaptions(task);
     }
@@ -1063,7 +1127,11 @@
         if (v.readyState < 2 || !isFinite(v.duration)) continue;
         if (!master || v.duration > master.duration) master = v;
       }
-      if (!master || master.paused) return;
+      if (!master) return;
+      // Watchdog: the longest clip has finished → restart the grid together,
+      // even if a sibling stalled, 404'd, or never fired `ended`. On screen only.
+      if (master.ended) { if (onScreen(videos)) restartAll(); return; }
+      if (master.paused) return;
       const t = master.currentTime;
       videos.forEach(v => {
         if (v === master) return;
@@ -1083,34 +1151,24 @@
       });
     }, 500);
 
-    // ==== Preload adjacent-task videos in the background ====
-    // Fetching bytes into the browser cache (via a plain HTTP GET) means when
-    // the user clicks a different tab, video.load() just uses the cached bytes
-    // instead of a fresh network round-trip.
-    // Mobile: SKIP the mass prefetch. Pulling ~20 mp4s (>100 MB) in the
-    // background is one of the routes to the memory/panic issue and is
-    // wasted work over cellular.
-    const IS_MOBILE_RES = window.matchMedia('(max-width: 720px)').matches;
+    // ==== Prefetch a task's four clips when its tab is hovered (desktop) ====
+    // Targeted: only the task the visitor is about to click — not all twenty
+    // clips (~50 MB) three seconds after page load, which starved the videos
+    // actually on screen.
     if (!IS_MOBILE_RES) {
       const METHODS = ['vision-only', 'maniwav', 'rgba-attention', 'rgba-history'];
-      const TASKS   = Array.from(tabs).map(b => b.dataset.task);
-      let prefetched = false;
-      function prefetchAll() {
-        if (prefetched) return;
-        prefetched = true;
-        TASKS.forEach(task => {
-          METHODS.forEach(m => {
-            const url = `static/videos/results/${task}/${m}.mp4`;
-            const link = document.createElement('link');
-            link.rel = 'prefetch';
-            link.as = 'video';
-            link.href = url;
-            document.head.appendChild(link);
-          });
+      const prefetched = new Set();
+      function prefetchTask(task) {
+        if (!task || prefetched.has(task)) return;
+        prefetched.add(task);
+        METHODS.forEach(m => {
+          const link = document.createElement('link');
+          link.rel  = 'prefetch';
+          link.href = `static/videos/results/${task}/${m}.mp4`;
+          document.head.appendChild(link);
         });
       }
-      setTimeout(prefetchAll, 3000);
-      tabs.forEach(b => b.addEventListener('mouseenter', prefetchAll, { once: true }));
+      tabs.forEach(b => b.addEventListener('mouseenter', () => prefetchTask(b.dataset.task)));
     }
   })();
 </script>
@@ -1129,13 +1187,13 @@
         <div class="attn-pair">
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
-            <video autoplay muted loop playsinline>
+            <video muted loop playsinline preload="none">
               <source src="static/videos/attn/threading/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
             <span class="attn-tag attn-tag-accent">AV-Attention</span>
-            <video autoplay muted loop playsinline>
+            <video muted loop playsinline preload="none">
               <source src="static/videos/attn/threading/rgba.mp4" type="video/mp4" />
             </video>
           </div>
@@ -1147,13 +1205,13 @@
         <div class="attn-pair">
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
-            <video autoplay muted loop playsinline>
+            <video muted loop playsinline preload="none">
               <source src="static/videos/attn/peeling/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
             <span class="attn-tag attn-tag-accent">AV-Attention</span>
-            <video autoplay muted loop playsinline>
+            <video muted loop playsinline preload="none">
               <source src="static/videos/attn/peeling/rgba.mp4" type="video/mp4" />
             </video>
           </div>
@@ -1165,13 +1223,13 @@
         <div class="attn-pair">
           <div class="attn-cell">
             <span class="attn-tag">Vision-Only</span>
-            <video autoplay muted loop playsinline>
+            <video muted loop playsinline preload="none">
               <source src="static/videos/attn/cleaning/rgb.mp4" type="video/mp4" />
             </video>
           </div>
           <div class="attn-cell">
             <span class="attn-tag attn-tag-accent">AV-Attention</span>
-            <video autoplay muted loop playsinline>
+            <video muted loop playsinline preload="none">
               <source src="static/videos/attn/cleaning/rgba.mp4" type="video/mp4" />
             </video>
           </div>
@@ -1192,7 +1250,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">Vision-Only</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/failures/grinding_vision-only_demo_14_wrist_right.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1201,7 +1259,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag fail-tag-attention">AV-Attention</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/failures/grinding_attention_demo_10_wrist_left.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1210,7 +1268,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag fail-tag-attention">AV-Attention</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/failures/cutting_attention_demo_5.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1219,7 +1277,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">Vision-Only</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/failures/cleaning_vision-only_demo_3.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1228,7 +1286,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag">ManiWAV-inspired</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/failures/cleaning_maniwav_demo_19.mp4" type="video/mp4" />
           </video>
         </div>
@@ -1237,7 +1295,7 @@
       <figure class="fail-tile">
         <div class="fail-media">
           <span class="fail-tag fail-tag-history">AV-History</span>
-          <video autoplay muted loop playsinline>
+          <video muted loop playsinline preload="none">
             <source src="static/videos/failures/cleaning_history_demo_7.mp4" type="video/mp4" />
           </video>
         </div>

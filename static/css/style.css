@@ -386,6 +386,7 @@ video.fit-contain { object-fit: contain !important; }
 }
 /* No leftover tile at 6 items; add a `:nth-child(N) { grid-column: 2 / span 2; }` rule here if the count becomes odd */
 .fail-media {
+  position: relative;             /* positioning context for the injected audio button */
   background: #0b0c0f;
   overflow: hidden;
   min-height: 160px;              /* fallback so the badge/tag show before metadata loads */
