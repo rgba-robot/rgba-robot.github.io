@@ -467,12 +467,14 @@
       const caption = tile.querySelector('figcaption');
 
       if (IS_MOBILE) {
-        // Two videos, both playing in lock-step, one on top via z-index
-        // (CSS: .compare-mobile[data-mode]). The toggle only flips data-mode —
-        // nothing loads, nothing seeks, so there is no black frame and no gap.
-        // Decoder budget: the observer lets one unit play at a time, so this is
-        // two decoders for the ONE active tile, not ten across the grid (the
-        // reason the earlier dual-video version was dropped).
+        // Two clips, ONE decoder. The clip on top plays; the other is parked
+        // (paused, data primed, flagged data-standby so the observer leaves it
+        // alone). On tap, the parked clip is seeked to the live clock and
+        // started, but the swap (a z-index flip via data-mode) only happens
+        // once it has painted a frame — the current clip keeps playing until
+        // then, so there is never a blank frame. No continuous sync, so no
+        // playbackRate nudging: that, plus a second 720p decode, is what made
+        // the dual-playing version drop frames on phones.
         const viewport = document.createElement('div');
         viewport.className = 'compare-viewport compare-mobile';
         viewport.dataset.mode = 'rgba';
@@ -480,7 +482,7 @@
           <video class="cmp-mobile cmp-mobile-rgba" muted loop playsinline preload="none" poster="${posterBase}/rgbs.jpg">
             <source src="${base}/rgbs.mp4" type="video/mp4">
           </video>
-          <video class="cmp-mobile cmp-mobile-rgb" muted loop playsinline preload="none" poster="${posterBase}/rgb.jpg">
+          <video class="cmp-mobile cmp-mobile-rgb" muted loop playsinline preload="none" poster="${posterBase}/rgb.jpg" data-standby="true">
             <source src="${base}/rgb.mp4" type="video/mp4">
           </video>
           <span class="cmp-label cmp-label-l">AV</span>
@@ -493,26 +495,60 @@
         const label   = viewport.querySelector('.cmp-label-l');
         const toggle  = viewport.querySelector('.cmp-mobile-toggle');
         attachAudioButton(videoA, viewport);
-        syncPair(videoA, videoB);
+
+        // While the visible clip plays, quietly get the parked clip's data in
+        // (from the HTTP cache the prefetcher filled) so a tap has nothing to
+        // wait for. It stays paused: primed, not decoding.
+        const prime = (v) => {
+          if (v.dataset.standby !== 'true' || v.readyState !== 0) return;
+          v.preload = 'auto'; v.setAttribute('preload', 'auto');
+          try { v.load(); } catch (_) {}
+        };
+        videoA.addEventListener('playing', () => prime(videoB));
+        videoB.addEventListener('playing', () => prime(videoA));
 
         let showingRGBA = true;
+        let switching   = false;
+        let lead        = 0.10;   // s: start the parked clip this far ahead so it lands in sync after its first frame
         toggle.addEventListener('click', (e) => {
           e.stopPropagation();
-          showingRGBA = !showingRGBA;
-          viewport.dataset.mode  = showingRGBA ? 'rgba' : 'rgb';
-          label.textContent      = showingRGBA ? 'AV' : 'RGB';
-          label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
-          toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show AV';
-          toggle.setAttribute('aria-pressed', showingRGBA);
-          // Safety net: if the clip being revealed fell behind (e.g. it was
-          // still loading when the other started), snap it to the shown clock.
-          const show = showingRGBA ? videoA : videoB;
-          const hide = showingRGBA ? videoB : videoA;
-          if (show.readyState >= 2 && hide.readyState >= 2 &&
-              Math.abs(show.currentTime - hide.currentTime) > 0.1) {
-            try { show.currentTime = hide.currentTime; } catch (_) {}
-          }
-          if (show.paused && !hide.paused) { const p = show.play(); if (p && p.catch) p.catch(() => {}); }
+          if (switching) return;
+          switching = true;
+          const show = showingRGBA ? videoB : videoA;   // about to be revealed
+          const hide = showingRGBA ? videoA : videoB;   // currently on top
+          let flipped = false;
+          const flip = () => {
+            if (flipped) return;
+            flipped = true; switching = false;
+            showingRGBA = !showingRGBA;
+            viewport.dataset.mode  = showingRGBA ? 'rgba' : 'rgb';
+            label.textContent      = showingRGBA ? 'AV' : 'RGB';
+            label.style.background = showingRGBA ? 'var(--accent)' : 'rgba(0,0,0,0.55)';
+            toggle.textContent     = showingRGBA ? 'Show RGB' : 'Show AV';
+            toggle.setAttribute('aria-pressed', showingRGBA);
+            // Learn the seek/start latency so the next switch lands closer.
+            if (show.readyState >= 2 && hide.readyState >= 2) {
+              lead = Math.min(0.5, Math.max(0, lead + (hide.currentTime - show.currentTime)));
+            }
+            // Audio follows the clip on top.
+            if (!hide.muted) { show.muted = false; hide.muted = true; activeVideo = show; }
+            hide.dataset.standby = 'true';
+            hide.dataset.autoPaused = 'true';
+            if (!hide.paused) hide.pause();
+          };
+          const start = () => {
+            const dur = show.duration || hide.duration || 0;
+            let t = hide.currentTime + lead;
+            if (dur && t > dur - 0.05) t = t - dur;          // wrapped past the loop point
+            try { show.currentTime = Math.max(0, t); } catch (_) {}
+            const p = show.play(); if (p && p.catch) p.catch(() => {});
+            if ('requestVideoFrameCallback' in show) show.requestVideoFrameCallback(() => flip());
+            else show.addEventListener('timeupdate', flip, { once: true });
+          };
+          show.dataset.standby = 'false';                    // the observer may keep it playing from here on
+          if (show.readyState >= 1) start();
+          else { show.addEventListener('loadedmetadata', start, { once: true }); prime(show); try { show.load(); } catch (_) {} }
+          setTimeout(flip, 1500);                            // worst case (cold network): swap anyway
         });
 
         return;   // skip the desktop slider setup for this tile
@@ -771,6 +807,8 @@
           if (v.ended) return;
           // Respect a pause the visitor made through native controls.
           if (v.dataset.userPaused === 'true') return;
+          // The mobile comparator's parked clip: primed, but only its toggle starts it.
+          if (v.dataset.standby === 'true') return;
           if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
         } else {
           if (!v.paused) { v.dataset.autoPaused = 'true'; v.pause(); }
