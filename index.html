@@ -668,25 +668,63 @@
     //  - the visibility observer talks to the group through v.__wake(), never
     //    play(), and marks each member data-wanted so mobile's "only members
     //    on screen" rule still holds.
+    //  - mobile: a phone's decoder budget is already spent on two full-size
+    //    clips, and every playbackRate change or seek there costs dropped
+    //    frames (the comparator above learnt this on device). So on phones the
+    //    rate is never touched, the clock is never seeked except to 0 at the
+    //    loop point (a keyframe), and a follower is moved only when it is
+    //    clearly off, at most once every 1.5 s. A residual offset of a few
+    //    frames between two different rollouts is invisible; a stutter is not.
     function syncGroup(vs) {
-      const SOFT = 0.04, HARD = 0.25, MAX_NUDGE = 0.15;
-      vs.forEach(v => { v.loop = false; v.removeAttribute('loop'); v.playbackRate = 1; });
+      const SOFT = IS_MOBILE ? 0.08 : 0.04, HARD = IS_MOBILE ? 0.40 : 0.25, MAX_NUDGE = IS_MOBILE ? 0 : 0.15;
+      const SEEK_COOLDOWN = 1500;             // ms between corrective seeks of one clip: no seek storms on a slow decoder
+      let   lead = IS_MOBILE ? 0.06 : 0.02;   // seek this far ahead of the clock; learnt from each seek's latency
+      const setRate = (v, r) => { if (v.playbackRate !== r) v.playbackRate = r; };
+      const clampT  = (v, t) => Math.min(t, Math.max(0, v.duration - 0.05));
+      vs.forEach(v => { v.loop = false; v.removeAttribute('loop'); setRate(v, 1); });
       const wanted   = v => v.dataset.wanted === 'true';
       const broken   = v => v.dataset.broken === 'true';
       const usable   = v => !broken(v) && v.readyState >= 1 && isFinite(v.duration) && v.duration > 0;
       const buffered = v => v.readyState >= 3;
-      // The clock: longest clip that should be playing (so on mobile, where an
-      // off-screen member is paused, the clock is always a running clip).
+      // The clock: among the clips that should be playing, a running one over
+      // a paused one, then the longest. (On mobile an off-screen member is
+      // paused on its own; when it comes back it must join the running clip,
+      // not drag the running clip back to where it stopped.)
       function master() {
+        const better = (v, m) => !m || (!v.paused && m.paused) || (v.paused === m.paused && v.duration > m.duration);
         let m = null;
-        for (const v of vs) { if (usable(v) && wanted(v) && (!m || v.duration > m.duration)) m = v; }
-        if (!m) for (const v of vs) { if (usable(v) && (!m || v.duration > m.duration)) m = v; }
+        for (const v of vs) { if (usable(v) && wanted(v) && better(v, m)) m = v; }
+        if (!m) for (const v of vs) { if (usable(v) && better(v, m)) m = v; }
         return m;
       }
       function play(v)  { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
       function pause(v) { if (!v.paused) { v.dataset.autoPaused = 'true'; v.pause(); } }
       function playWanted() { vs.forEach(v => { if (wanted(v) && !broken(v) && v.paused && !v.ended) play(v); }); }
       const allBuffered = () => vs.every(v => !wanted(v) || broken(v) || buffered(v));
+      // Corrective seek of one running follower onto the clock, rate-limited.
+      // The seek lands `lead` ahead of where the clock was; once it completes,
+      // how far the clock has moved on tells us the seek latency, and the next
+      // seek leads by that.
+      function seekTo(v, m) {
+        const now = performance.now();
+        if (v.seeking || (v.__lastSeek && now - v.__lastSeek < SEEK_COOLDOWN)) return;
+        v.__lastSeek = now;
+        try { v.currentTime = clampT(v, m.currentTime + lead); } catch (_) { return; }
+        v.addEventListener('seeked', () => {
+          if (m.paused || v.paused) return;
+          const behind = m.currentTime - v.currentTime;          // > 0: landed behind the clock
+          lead = Math.min(0.5, Math.max(0, lead + 0.8 * behind));
+        }, { once: true });
+      }
+      // Followers that are off jump onto the clock; the clock keeps running.
+      function catchUp(m) {
+        const t = m.currentTime;
+        vs.forEach(v => {
+          if (v === m || !usable(v) || v.paused || v.ended) return;
+          if (t > v.duration - 0.05) return;
+          if (Math.abs(v.currentTime - t) > SOFT) seekTo(v, m);
+        });
+      }
 
       let busy = false;          // a rendezvous is in progress
       let alignPending = false;  // released cold; align once everyone has buffered
@@ -696,9 +734,9 @@
         if (busy) return;
         busy = true;
         vs.forEach(v => {
-          v.playbackRate = 1;
+          setRate(v, 1);
           pause(v);
-          if (usable(v)) { try { v.currentTime = Math.min(t, Math.max(0, v.duration - 0.05)); } catch (_) {} }
+          if (usable(v)) { try { v.currentTime = clampT(v, t); } catch (_) {} }
         });
         const t0 = performance.now();
         (function wait() {
@@ -716,11 +754,18 @@
         // jump is acceptable; with the prefetch cache it lands within ~100 ms.
         if (!m || !allBuffered()) { alignPending = true; playWanted(); return; }
         if (m.ended)  { restart(); return; }
-        if (m.paused) { rendezvous(m.currentTime); return; }
-        // Group already running: late joiners jump onto the clock.
+        // Everything paused (scrolled away and back): desktop re-syncs at the
+        // clock's time; mobile just releases — the members were paused in one
+        // tick, so they still hold their offset, and no seek is needed.
+        if (m.paused) { if (IS_MOBILE) playWanted(); else rendezvous(m.currentTime); return; }
+        // Group already running: late joiners jump onto the clock. On mobile a
+        // joiner that is already close (it was paused in the same tick as the
+        // clock, which has just been released ahead of it) simply plays.
         vs.forEach(v => {
           if (v === m || !wanted(v) || broken(v) || !v.paused || v.ended) return;
-          if (usable(v)) { try { v.currentTime = m.currentTime; } catch (_) {} }
+          if (usable(v) && !(IS_MOBILE && Math.abs(v.currentTime - m.currentTime) <= HARD)) {
+            try { v.currentTime = clampT(v, m.currentTime + lead); } catch (_) {}
+          }
           play(v);
         });
       }
@@ -731,6 +776,7 @@
         if (alignPending) {
           if (!allBuffered()) return;
           alignPending = false;
+          if (IS_MOBILE) { catchUp(m); return; }    // followers move; the clock keeps running
           let off = 0;
           vs.forEach(v => { if (v !== m && usable(v) && !v.paused) off = Math.max(off, Math.abs(v.currentTime - m.currentTime)); });
           if (off > SOFT) { rendezvous(m.currentTime); return; }
@@ -743,9 +789,9 @@
           if (t > (v.duration || 0) - 0.05) return;          // a shorter clip at its end just holds
           const dt = v.currentTime - t;                       // > 0: follower is ahead
           const a  = Math.abs(dt);
-          if (a > HARD)      { try { v.currentTime = t + 0.02; } catch (_) {} v.playbackRate = 1; }
-          else if (a > SOFT) { v.playbackRate = 1 - Math.max(-MAX_NUDGE, Math.min(MAX_NUDGE, dt * 0.6)); }
-          else               { v.playbackRate = 1; }
+          if (a > HARD)                       { seekTo(v, m); setRate(v, 1); }
+          else if (a > SOFT && MAX_NUDGE > 0) setRate(v, 1 - Math.max(-MAX_NUDGE, Math.min(MAX_NUDGE, dt * 0.6)));
+          else                                setRate(v, 1);
         });
       }, 200);
       vs.forEach(v => {
