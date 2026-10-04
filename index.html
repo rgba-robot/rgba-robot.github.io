@@ -632,17 +632,17 @@
       }
     });
 
-    // ==== Auto-inject an audio button on every video (rollout badge is pure CSS) ====
+    // ==== Auto-inject an audio button on the remaining videos (rollout badge is pure CSS) ====
     document.querySelectorAll('video').forEach(video => {
       const parent = video.parentElement;
       if (!parent) return;
       if (video.hasAttribute('controls')) return;                  // native <video controls> owns its bottom UI
       if (parent.classList.contains('compare-viewport')) return;   // comparator handled above
       if (parent.classList.contains('p-output')) return;           // representations are silent
-
-      if (parent.classList.contains('attn-cell'))  { attachAudioButton(video, parent); return; }
-      if (parent.classList.contains('res-media'))  { attachAudioButton(video, parent); return; }
-      if (parent.classList.contains('fail-media')) { attachAudioButton(video, parent); return; }
+      // Experiment tiles, attention rows and failure clips play silently: no button.
+      if (parent.classList.contains('res-media'))  return;
+      if (parent.classList.contains('attn-cell'))  return;
+      if (parent.classList.contains('fail-media')) return;
 
       // Any other video (teaser, setup, baselines, failures…): wrap it in a positioned shell.
       const shell = document.createElement('div');
